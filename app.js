@@ -2,6 +2,7 @@
 let currentPage = 'home';
 let currentPlatformId = null;
 let currentEventId = null;
+let _countdownInterval = null; // cleared on every navigate()
 
 // ===== BOOKMARK STORE =====
 const BOOKMARK_KEY = 'es_bookmarks';
@@ -786,6 +787,52 @@ function renderEventDetail() {
       <p>© 2026 EventSphere. All rights reserved.</p>
     </footer>
   </div>`;
+}
+
+// ===== COUNTDOWN TIMER =====
+function startCountdown(eventId) {
+  if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
+
+  const event = getEventById(eventId);
+  if (!event) return;
+
+  const cdD = document.getElementById('cd-d');
+  const cdH = document.getElementById('cd-h');
+  const cdM = document.getElementById('cd-m');
+  const cdS = document.getElementById('cd-s');
+  if (!cdD) return; // no timer elements (closed status)
+
+  function tick() {
+    const now    = new Date();
+    const end    = new Date(event.registrationEnd);
+    const start  = new Date(event.registrationStart);
+    const status = getEventStatus(event);
+
+    const target = status.key === 'live' ? end : start;
+    const diff   = target - now;
+
+    if (diff <= 0 || status.key === 'closed') {
+      clearInterval(_countdownInterval);
+      _countdownInterval = null;
+      if (currentPage === 'event' && currentEventId === eventId) renderPage();
+      return;
+    }
+
+    const totalSec = Math.floor(diff / 1000);
+    const days  = Math.floor(totalSec / 86400);
+    const hours = Math.floor((totalSec % 86400) / 3600);
+    const mins  = Math.floor((totalSec % 3600) / 60);
+    const secs  = totalSec % 60;
+    const pad   = n => String(n).padStart(2, '0');
+
+    if (cdD) cdD.textContent = pad(days);
+    if (cdH) cdH.textContent = pad(hours);
+    if (cdM) cdM.textContent = pad(mins);
+    if (cdS) cdS.textContent = pad(secs);
+  }
+
+  tick();
+  _countdownInterval = setInterval(tick, 1000);
 }
 
 // ===== REGISTRATION FORM PAGE =====
