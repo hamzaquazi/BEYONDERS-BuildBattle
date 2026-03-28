@@ -836,10 +836,33 @@ function startCountdown(eventId) {
 }
 
 // ===== REGISTRATION FORM PAGE =====
+const PROFILE_KEY = 'es_user_profile';
+
+function _loadSavedProfile() {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); }
+  catch { return null; }
+}
+
+function _saveProfile(data) {
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(data)); } catch {}
+}
+
 function renderRegisterPage() {
-  const event = getEventById(currentEventId);
+  const event    = getEventById(currentEventId);
   const platform = getPlatformById(event?.platformId || currentPlatformId);
   if (!event) return '<div class="section"><p>Event not found.</p></div>';
+
+  const status = getEventStatus(event);
+  if (status.key !== 'live') {
+    return `<div class="section" style="text-align:center;padding:80px 24px">
+      <div style="font-size:2.5rem;margin-bottom:16px">🔒</div>
+      <h2 style="margin-bottom:10px">Registration ${status.key === 'soon' ? 'Not Yet Open' : 'Closed'}</h2>
+      <p style="color:var(--text-muted);margin-bottom:24px">This event is ${status.label.toLowerCase()}.</p>
+      <button class="btn btn-primary" onclick="navigate('event',{eventId:'${event.id}',platformId:'${platform?.id}'})">← Back to Event</button>
+    </div>`;
+  }
+
+  const saved = _loadSavedProfile();
 
   return `
   <div class="page">
@@ -854,100 +877,93 @@ function renderRegisterPage() {
     </div>
 
     <div class="form-page">
-      <!-- Event summary mini card -->
-      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 22px;margin-bottom:24px;display:flex;align-items:center;gap:14px;">
-        <div class="event-category-badge ${catBadgeClass(event.category)}" style="margin:0;font-size:0.7rem">${catIcon(event.category)} ${event.category}</div>
-        <div>
-          <div style="font-weight:700;font-size:0.95rem">${event.title}</div>
-          <div style="color:var(--text-muted);font-size:0.78rem">${platform?.name} · Closes ${formatDate(event.registrationEnd)}</div>
+      <!-- Event summary mini-card -->
+      <div class="reg-event-summary">
+        <span class="event-category-badge ${catBadgeClass(event.category)}" style="font-size:0.7rem">${catIcon(event.category)} ${event.category}</span>
+        <div class="reg-event-summary-info">
+          <div class="reg-event-title">${event.title}</div>
+          <div class="reg-event-meta">${platform?.name} · Closes ${formatDate(event.registrationEnd)}</div>
         </div>
+        <span class="edp-status-pill edp-status-${status.key}" style="margin-left:auto;flex-shrink:0">
+          <span class="edp-status-dot"></span>${status.label}
+        </span>
       </div>
 
-      <div class="form-card">
+      <!-- Main form card -->
+      <div class="form-card" id="reg-form-card">
         <h1 class="form-title">Register for Event</h1>
-        <p class="form-sub">Fill out the details below to secure your spot. You'll receive a confirmation on your WhatsApp.</p>
+        <p class="form-sub">Fill in your details and upload payment proof to secure your spot.</p>
+
+        ${saved ? `<div class="autofill-banner" id="autofill-banner">
+          <span>✨ We remembered your details! <a href="#" onclick="clearAutofill();return false;">Clear</a></span>
+        </div>` : ''}
 
         <form id="reg-form" novalidate>
+
+          <!-- Name row -->
           <div class="form-row">
             <div class="form-group" id="grp-firstname">
               <label class="form-label" for="firstname">First Name *</label>
-              <input class="form-control" id="firstname" type="text" placeholder="Arjun" />
+              <input class="form-control" id="firstname" type="text" placeholder="Arjun"
+                value="${saved?.firstName || ''}" autocomplete="given-name" />
               <div class="form-error" id="err-firstname">Please enter your first name.</div>
             </div>
             <div class="form-group" id="grp-lastname">
               <label class="form-label" for="lastname">Last Name *</label>
-              <input class="form-control" id="lastname" type="text" placeholder="Mehta" />
+              <input class="form-control" id="lastname" type="text" placeholder="Mehta"
+                value="${saved?.lastName || ''}" autocomplete="family-name" />
               <div class="form-error" id="err-lastname">Please enter your last name.</div>
             </div>
           </div>
 
+          <!-- Email -->
           <div class="form-group" id="grp-email">
             <label class="form-label" for="email">Email Address *</label>
-            <input class="form-control" id="email" type="email" placeholder="you@example.com" />
+            <input class="form-control" id="email" type="email" placeholder="you@example.com"
+              value="${saved?.email || ''}" autocomplete="email" />
             <div class="form-error" id="err-email">Please enter a valid email address.</div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group" id="grp-phone">
-              <label class="form-label" for="phone">Phone Number *</label>
-              <input class="form-control" id="phone" type="tel" placeholder="9876543210" maxlength="10" />
-              <div class="form-error" id="err-phone">Please enter a valid 10-digit phone number.</div>
+          <!-- Phone -->
+          <div class="form-group" id="grp-phone">
+            <label class="form-label" for="phone">Phone Number *</label>
+            <div class="input-with-prefix">
+              <span class="input-prefix">🇮🇳 +91</span>
+              <input class="form-control" id="phone" type="tel" placeholder="9876543210" maxlength="10"
+                value="${saved?.phone || ''}" autocomplete="tel-national" />
             </div>
-            <div class="form-group" id="grp-age">
-              <label class="form-label" for="age">Age</label>
-              <input class="form-control" id="age" type="number" placeholder="22" min="10" max="100" />
+            <div class="form-error" id="err-phone">Please enter a valid 10-digit phone number.</div>
+          </div>
+
+          <!-- Payment screenshot upload -->
+          <div class="form-group" id="grp-payment">
+            <label class="form-label" for="payment">Payment Screenshot *</label>
+            <div class="file-upload-zone" id="file-zone" onclick="document.getElementById('payment').click()">
+              <div class="file-upload-icon">📸</div>
+              <div class="file-upload-text" id="file-label">Click to upload or drag & drop</div>
+              <div class="file-upload-hint">PNG, JPG or PDF · Max 5 MB</div>
+              <input type="file" id="payment" accept="image/*,.pdf"
+                style="display:none" onchange="handleFileSelect(this)" />
             </div>
+            <div class="form-error" id="err-payment">Please upload your payment screenshot.</div>
           </div>
 
-          <div class="form-group" id="grp-city">
-            <label class="form-label" for="city">City *</label>
-            <input class="form-control" id="city" type="text" placeholder="Mumbai" />
-            <div class="form-error" id="err-city">Please enter your city.</div>
-          </div>
-
-          <div class="form-group" id="grp-experience">
-            <label class="form-label" for="experience">Experience Level</label>
-            <select class="form-select" id="experience">
-              <option value="">Select level...</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-              <option value="professional">Professional</option>
-            </select>
-          </div>
-
-          <div class="form-group" id="grp-how">
-            <label class="form-label" for="how">How did you hear about this event?</label>
-            <select class="form-select" id="how">
-              <option value="">Select source...</option>
-              <option value="social">Social Media</option>
-              <option value="friend">Friend / Colleague</option>
-              <option value="email">Email Newsletter</option>
-              <option value="website">EventSphere Website</option>
-              <option value="whatsapp">WhatsApp Group</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="notes">Additional Notes</label>
-            <textarea class="form-control" id="notes" rows="3" placeholder="Any dietary requirements, accessibility needs or questions..."></textarea>
-          </div>
-
+          <!-- Terms -->
           <div class="form-group" id="grp-terms">
             <label class="form-check">
               <input type="checkbox" id="terms" />
-              <span class="form-check-label">I agree to the <a href="#">Terms & Conditions</a> and <a href="#">Privacy Policy</a>. I understand that my registration is subject to availability.</span>
+              <span class="form-check-label">I confirm the payment is complete and agree to the
+                <a href="#" onclick="return false">Terms &amp; Conditions</a>.</span>
             </label>
-            <div class="form-error" id="err-terms">You must agree to the terms to register.</div>
+            <div class="form-error" id="err-terms">You must confirm before registering.</div>
           </div>
 
           <button type="submit" class="btn btn-primary" id="submit-btn">
             🎉 Complete Registration
           </button>
-          <button type="button" class="btn btn-outline" style="margin-top:10px" onclick="navigate('event',{eventId:'${event.id}',platformId:'${platform?.id}'})">
-            ← Cancel
-          </button>
+          <button type="button" class="btn btn-outline" style="margin-top:10px"
+            onclick="navigate('event',{eventId:'${event.id}',platformId:'${platform?.id}'})">← Cancel</button>
+
         </form>
       </div>
     </div>
@@ -1206,58 +1222,68 @@ function handleFormSubmit(e) {
   e.preventDefault();
   let valid = true;
 
+  // Core field validation
   const fields = [
     { id: 'firstname', grp: 'grp-firstname', validate: v => v.trim().length > 0 },
-    { id: 'lastname', grp: 'grp-lastname', validate: v => v.trim().length > 0 },
-    { id: 'email', grp: 'grp-email', validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
-    { id: 'phone', grp: 'grp-phone', validate: v => /^\d{10}$/.test(v) },
-    { id: 'city', grp: 'grp-city', validate: v => v.trim().length > 0 },
+    { id: 'lastname',  grp: 'grp-lastname',  validate: v => v.trim().length > 0 },
+    { id: 'email',     grp: 'grp-email',     validate: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+    { id: 'phone',     grp: 'grp-phone',     validate: v => /^\d{10}$/.test(v) },
   ];
 
   fields.forEach(f => {
-    const el = document.getElementById(f.id);
+    const el  = document.getElementById(f.id);
     const grp = document.getElementById(f.grp);
     if (el && grp) {
-      if (!f.validate(el.value)) {
-        grp.classList.add('error');
-        valid = false;
-      } else {
-        grp.classList.remove('error');
-      }
+      if (!f.validate(el.value)) { grp.classList.add('error'); valid = false; }
+      else                        { grp.classList.remove('error'); }
     }
   });
 
-  // Terms
-  const terms = document.getElementById('terms');
-  const termsGrp = document.getElementById('grp-terms');
-  if (terms && !terms.checked) {
-    termsGrp.classList.add('error');
-    valid = false;
-  } else if (terms) {
-    termsGrp.classList.remove('error');
+  // Payment screenshot validation
+  const paymentInput = document.getElementById('payment');
+  const paymentGrp   = document.getElementById('grp-payment');
+  const hasFile = paymentInput?.files?.length > 0;
+  if (paymentGrp) {
+    if (!hasFile) { paymentGrp.classList.add('error'); valid = false; }
+    else          { paymentGrp.classList.remove('error'); }
   }
+
+  // Terms checkbox
+  const terms    = document.getElementById('terms');
+  const termsGrp = document.getElementById('grp-terms');
+  if (terms && !terms.checked) { termsGrp?.classList.add('error'); valid = false; }
+  else if (terms)              { termsGrp?.classList.remove('error'); }
 
   if (!valid) return;
 
-  // Persist via Store (localStorage-backed)
+  // Build registration payload
+  const firstName = document.getElementById('firstname').value.trim();
+  const lastName  = document.getElementById('lastname').value.trim();
+  const email     = document.getElementById('email').value.trim();
+  const phone     = document.getElementById('phone').value.trim();
+  const fileName  = paymentInput?.files?.[0]?.name || '';
+
+  // ── Autofill save ───────────────────────────────────────────────────────────
+  _saveProfile({ firstName, lastName, email, phone });
+
+  // ── Persist registration via Store ──────────────────────────────────────────
   const result = Store.registerUser(currentEventId, {
-    name:   `${document.getElementById('firstname').value} ${document.getElementById('lastname').value}`,
-    email:  document.getElementById('email').value,
-    phone:  document.getElementById('phone').value,
-    status: 'Pending',
+    name:            `${firstName} ${lastName}`,
+    email,
+    phone,
+    paymentFile:     fileName,
+    status:          'Pending',
   });
 
   if (!result.ok) {
-    // Surface storage / duplicate / capacity errors without leaving the form
     showToast(`⚠️ ${result.error}`);
     return;
   }
 
-  showToast('🎉 Registration successful! Check your WhatsApp for confirmation.');
-
-  setTimeout(() => {
-    navigate('event', { eventId: currentEventId, platformId: currentPlatformId });
-  }, 1800);
+  // ── Show success screen ──────────────────────────────────────────────────────
+  const event    = getEventById(currentEventId);
+  const platform = getPlatformById(event?.platformId || currentPlatformId);
+  showSuccessScreen(event?.whatsappLink, currentEventId, platform?.id || currentPlatformId);
 }
 
 // ===== TOAST =====

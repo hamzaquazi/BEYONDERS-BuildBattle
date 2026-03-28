@@ -1079,3 +1079,134 @@ button:disabled {
   .edp-cd-unit { min-width: 36px; }
 }
 
+/* ===== REGISTRATION FORM PAGE ===== */
+
+/* Event summary mini-card */
+.reg-event-summary {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px; margin-bottom: 24px;
+}
+.reg-event-summary-info { flex: 1; min-width: 0; }
+.reg-event-title { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reg-event-meta  { color: var(--text-muted); font-size: 0.78rem; margin-top: 2px; }
+
+/* Autofill banner */
+.autofill-banner {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.25);
+  border-radius: var(--radius); padding: 10px 16px;
+  font-size: 0.82rem; color: var(--primary-light);
+  margin-bottom: 20px;
+}
+.autofill-banner a { color: inherit; font-weight: 600; text-decoration: underline; }
+
+/* Phone input with prefix */
+.input-with-prefix {
+  display: flex; align-items: stretch;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; transition: border-color var(--transition);
+  background: var(--bg);
+}
+.input-with-prefix:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+.input-prefix {
+  padding: 0 14px; background: rgba(255,255,255,0.04);
+  border-right: 1px solid var(--border);
+  display: flex; align-items: center;
+  font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;
+  flex-shrink: 0;
+}
+.input-with-prefix .form-control {
+  border: none !important; border-radius: 0 !important;
+  box-shadow: none !important; flex: 1;
+}
+
+/* File upload drag-drop zone */
+.file-upload-zone {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 6px;
+  border: 2px dashed var(--border); border-radius: var(--radius-lg);
+  padding: 36px 24px; cursor: pointer;
+  transition: all var(--transition); background: var(--bg);
+  text-align: center;
+}
+.file-upload-zone:hover {
+  border-color: var(--primary);
+  background: rgba(99,102,241,0.05);
+}
+.file-upload-zone.has-file {
+  border-color: var(--success);
+  background: rgba(16,185,129,0.05);
+}
+.file-upload-icon { font-size: 2rem; margin-bottom: 4px; }
+.file-upload-text {
+  font-size: 0.88rem; font-weight: 600; color: var(--text-muted);
+  transition: color var(--transition);
+}
+.file-upload-zone:hover .file-upload-text { color: var(--primary-light); }
+.file-upload-hint  { font-size: 0.72rem; color: var(--text-faint); }
+
+/* Error state for upload zone */
+.form-group.error .file-upload-zone { border-color: var(--danger); }
+
+/* ── Registration Success Screen ── */
+.reg-success {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; padding: 48px 32px;
+  animation: fadeInUp 0.5s ease both;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reg-success-icon {
+  font-size: 4rem; margin-bottom: 20px;
+  animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both;
+}
+@keyframes popIn {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.reg-success-title {
+  font-size: 1.8rem; font-weight: 800;
+  font-family: 'Outfit', sans-serif; margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--success), var(--accent));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.reg-success-msg {
+  color: var(--text-muted); font-size: 0.9rem; line-height: 1.7;
+  max-width: 440px; margin-bottom: 32px;
+}
+.reg-success-actions {
+  display: flex; flex-direction: column; gap: 12px;
+  width: 100%; max-width: 380px;
+}
+.reg-success-wa {
+  font-size: 1rem; padding: 14px 24px;
+  animation: glow 2s ease-in-out infinite alternate;
+}
+@keyframes glow {
+  from { box-shadow: 0 0 14px rgba(37,211,102,0.3); }
+  to   { box-shadow: 0 0 28px rgba(37,211,102,0.6); }
+}
+
+/* Ghost button (back to home) */
+.btn-ghost {
+  background: transparent; border: none;
+  color: var(--text-muted); font-size: 0.82rem;
+  padding: 8px 16px; cursor: pointer;
+  transition: color var(--transition);
+  font-family: 'Inter', sans-serif;
+}
+.btn-ghost:hover { color: var(--text); }
+
+@media (max-width: 600px) {
+  .reg-event-summary { flex-wrap: wrap; }
+  .file-upload-zone  { padding: 24px 16px; }
+  .reg-success       { padding: 32px 16px; }
+  .reg-success-title { font-size: 1.4rem; }
+}
