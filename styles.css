@@ -1210,3 +1210,160 @@ button:disabled {
   .reg-success       { padding: 32px 16px; }
   .reg-success-title { font-size: 1.4rem; }
 }
+
+/* ===== ORGANIZER DASHBOARD NEW COMPONENTS ===== */
+
+/* Dashboard header — title left, Create button right */
+.dashboard-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  margin-bottom: 28px;
+}
+.dashboard-header .dashboard-title { margin-bottom: 4px; }
+.dash-create-btn { white-space: nowrap; flex-shrink: 0; }
+
+/* ── Events & Registrations section ── */
+.dash-events-section {
+  margin-top: 32px;
+}
+.dash-section-header {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-bottom: 16px;
+}
+.dash-section-title {
+  font-size: 1.1rem; font-weight: 700;
+  font-family: 'Outfit', sans-serif; margin: 0;
+}
+.dash-section-sub { color: var(--text-muted); font-size: 0.8rem; }
+
+/* Platform accordion row */
+.dash-platform-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  margin-bottom: 12px; overflow: hidden;
+}
+.dash-platform-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; cursor: pointer; gap: 16px;
+  transition: background var(--transition);
+}
+.dash-platform-row:hover { background: rgba(255,255,255,0.03); }
+.dash-pl-left  { display: flex; align-items: center; gap: 14px; }
+.dash-pl-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.dash-pl-icon  {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.dash-pl-name  { font-weight: 700; font-size: 0.95rem; }
+.dash-pl-meta  { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.dash-pl-stat  { font-size: 0.82rem; color: var(--text-muted); }
+.dash-pl-chevron {
+  font-size: 0.7rem; color: var(--text-faint);
+  transition: transform var(--transition);
+  margin-left: 4px;
+}
+
+/* Platform body (revealed accordion) */
+.dash-platform-body { border-top: 1px solid var(--border); padding: 16px 20px; }
+
+/* Per-event block inside accordion */
+.dash-event-block {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 16px; overflow: hidden;
+}
+.dash-event-block:last-child { margin-bottom: 0; }
+.dash-event-header {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.dash-event-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dash-event-meta { flex: 1; }
+.dash-event-title {
+  font-size: 0.95rem; font-weight: 700; margin: 4px 0 8px;
+  font-family: 'Outfit', sans-serif;
+}
+.dash-event-dates {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;
+}
+
+/* Capacity bar inside event block */
+.dash-cap-bar-track {
+  height: 4px; background: var(--border); border-radius: 99px; overflow: hidden;
+}
+.dash-cap-bar-fill {
+  height: 100%; border-radius: 99px;
+  transition: width 0.8s ease;
+}
+
+/* Participants table inside event block */
+.dash-participants-table { padding: 0 18px 14px; }
+.dash-participants-table table { margin: 0; }
+.dash-participants-table .table-wrapper { border: none; padding: 0; background: transparent; }
+
+/* Empty state */
+.dash-empty {
+  padding: 20px; text-align: center;
+  color: var(--text-muted); font-size: 0.85rem;
+}
+
+/* ── Create Event slide-in panel ── */
+.dash-panel-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.dash-panel {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(480px, 100vw); z-index: 1000;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.4);
+}
+.dash-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.dash-panel-title {
+  font-size: 1rem; font-weight: 700; margin: 0;
+  font-family: 'Outfit', sans-serif;
+}
+.dash-panel-close {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-muted); border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer;
+  font-size: 0.9rem; display: flex; align-items: center; justify-content: center;
+  transition: all var(--transition);
+}
+.dash-panel-close:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+.dash-panel-body {
+  flex: 1; overflow-y: auto; padding: 24px;
+}
+.dash-panel-body .form-group { margin-bottom: 18px; }
+
+/* btn-sm variant */
+.btn-sm {
+  padding: 6px 14px !important;
+  font-size: 0.78rem !important;
+}
+
+/* inline text-link button */
+.btn-link {
+  background: none; border: none; padding: 0;
+  color: var(--primary-light); font-size: 0.85rem;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  text-decoration: underline;
+}
+.btn-link:hover { color: var(--accent); }
+
+@media (max-width: 768px) {
+  .dash-platform-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .dash-pl-right { width: 100%; justify-content: flex-start; }
+  .dash-event-dates { flex-direction: column; gap: 4px; }
+  .dash-panel { width: 100vw; }
+}

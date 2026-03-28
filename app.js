@@ -977,49 +977,39 @@ function renderRegisterPage() {
 
 // ===== DASHBOARD PAGE =====
 function renderDashboard() {
-  const totalRegs = getTotalRegistrations();
-  const totalEvents = events.length;
-  const openEvents = events.filter(e => isRegistrationOpen(e)).length;
+  const allEvents      = events;
+  const totalRegs      = getTotalRegistrations();
+  const totalEvents    = allEvents.length;
+  const openEvents     = allEvents.filter(e => getEventStatus(e).key === 'live').length;
   const totalPlatforms = platforms.length;
 
-  // Category breakdown
-  const techCount = events.filter(e => e.category === 'Tech').length;
-  const sportsCount = events.filter(e => e.category === 'Sports').length;
-  const culturalCount = events.filter(e => e.category === 'Cultural').length;
+  // Category counts
+  const techCount     = allEvents.filter(e => e.category === 'Tech').length;
+  const sportsCount   = allEvents.filter(e => e.category === 'Sports').length;
+  const culturalCount = allEvents.filter(e => e.category === 'Cultural').length;
+  const total         = techCount + sportsCount + culturalCount;
 
-  // All registrations flat list
-  const allRegistrations = [];
-  events.forEach(ev => {
-    const plat = getPlatformById(ev.platformId);
-    ev.registrations.forEach(r => {
-      allRegistrations.push({ ...r, eventTitle: ev.title, platformName: plat?.name || '' });
-    });
-  });
-
-  // Platform event counts
+  // Platform stats (spread so .name, .icon, .colorA, .colorB etc are available)
   const platformStats = platforms.map(p => ({
-    name: p.name,
-    icon: p.icon,
-    events: getEventsByPlatform(p.id).length,
-    regs: events.filter(e => e.platformId === p.id).reduce((sum, e) => sum + e.registrations.length, 0),
-    colorA: p.colorA, colorB: p.colorB
+    ...p,
+    evList: getEventsByPlatform(p.id),
+    regs:   getEventsByPlatform(p.id).reduce((s, ev) => s + ev.registrations.length, 0),
   }));
-
-  const maxPlatformRegs = Math.max(...platformStats.map(p => p.regs));
-
-  // Donut chart segments
-  const total = techCount + sportsCount + culturalCount;
-  const donutR = 50; const donutC = 60;
-  const techDeg = (techCount / total) * 360;
-  const sportsDeg = (sportsCount / total) * 360;
-  const culturalDeg = (culturalCount / total) * 360;
+  const maxRegs = Math.max(...platformStats.map(p => p.regs), 1);
 
   return `
   <div class="page">
     <div class="dashboard-page">
+
+      <!-- Header -->
       <div class="dashboard-header fade-in">
-        <h1 class="dashboard-title">📊 Organizer Dashboard</h1>
-        <p class="dashboard-sub">Overview of all platforms, events, and registrations</p>
+        <div>
+          <h1 class="dashboard-title">📊 Organizer Dashboard</h1>
+          <p class="dashboard-sub">Manage events, view registrations, and track performance</p>
+        </div>
+        <button class="btn btn-primary dash-create-btn" onclick="openCreateEventPanel()">
+          ＋ Create Event
+        </button>
       </div>
 
       <!-- STATS GRID -->
@@ -1034,7 +1024,7 @@ function renderDashboard() {
           <div class="stat-card-icon">📅</div>
           <div class="stat-card-value">${totalEvents}</div>
           <div class="stat-card-label">Total Events</div>
-          <div class="stat-card-change up">↑ ${openEvents} open now</div>
+          <div class="stat-card-change up">↑ ${openEvents} live now</div>
         </div>
         <div class="stat-card" style="--color-a:#f59e0b;--color-b:#ec4899">
           <div class="stat-card-icon">👥</div>
@@ -1059,119 +1049,223 @@ function renderDashboard() {
               <div class="bar-item">
                 <div class="bar-label">${p.icon} ${p.name.split(' ')[0]}</div>
                 <div class="bar-track">
-                  <div class="bar-fill" style="width:${maxPlatformRegs ? Math.round((p.regs / maxPlatformRegs) * 100) : 0}%;background:linear-gradient(90deg,${p.colorA},${p.colorB})"></div>
+                  <div class="bar-fill" style="width:${Math.round((p.regs/maxRegs)*100)}%;background:linear-gradient(90deg,${p.colorA},${p.colorB})"></div>
                 </div>
                 <div class="bar-value">${p.regs}</div>
               </div>
             `).join('')}
           </div>
         </div>
-
         <div class="chart-card">
           <div class="chart-title">Events by Category</div>
           <div class="donut-chart">
             <svg width="120" height="120" class="donut-svg" viewBox="0 0 120 120">
               ${renderDonutChart([
-                { count: techCount, color: '#6366f1', label: 'Tech' },
-                { count: sportsCount, color: '#10b981', label: 'Sports' },
+                { count: techCount,     color: '#6366f1', label: 'Tech'     },
+                { count: sportsCount,   color: '#10b981', label: 'Sports'   },
                 { count: culturalCount, color: '#f59e0b', label: 'Cultural' }
               ], total)}
             </svg>
             <div class="donut-legend">
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#6366f1"></div>
-                <span class="legend-label">Tech</span>
-                <span class="legend-val">${techCount}</span>
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#10b981"></div>
-                <span class="legend-label">Sports</span>
-                <span class="legend-val">${sportsCount}</span>
-              </div>
-              <div class="legend-item">
-                <div class="legend-dot" style="background:#f59e0b"></div>
-                <span class="legend-label">Cultural</span>
-                <span class="legend-val">${culturalCount}</span>
-              </div>
+              <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div><span class="legend-label">Tech</span><span class="legend-val">${techCount}</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div><span class="legend-label">Sports</span><span class="legend-val">${sportsCount}</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div><span class="legend-label">Cultural</span><span class="legend-val">${culturalCount}</span></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- PLATFORM TABLE -->
-      <div class="table-section fade-up-3">
-        <div class="table-section-header">
-          <div class="table-section-title">Platform Overview</div>
+      <!-- EVENTS BY PLATFORM ACCORDION -->
+      <div class="dash-events-section fade-up-3">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">📋 Events &amp; Registrations</h2>
+          <span class="dash-section-sub">${totalEvents} events across ${totalPlatforms} platforms</span>
         </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Platform</th>
-                <th>Categories</th>
-                <th>Events</th>
-                <th>Registrations</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${platformStats.map(p => {
-                const plat = platforms.find(pl => pl.name === p.name);
-                return `
-                <tr>
-                  <td><span style="font-size:1.1rem;margin-right:8px">${p.icon}</span>${p.name}</td>
-                  <td>${plat?.categories.map(c => `<span class="tag tag-${c.toLowerCase()}" style="margin-right:4px">${c}</span>`).join('') || ''}</td>
-                  <td>${p.events}</td>
-                  <td>${p.regs}</td>
-                  <td><button class="btn btn-outline btn-sm" onclick="navigate('platform',{platformId:'${plat?.id}'})">View →</button></td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      <!-- ALL REGISTRATIONS TABLE -->
-      <div class="table-section fade-up-4">
-        <div class="table-section-header">
-          <div class="table-section-title">All Registrations <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400">(${allRegistrations.length} total)</span></div>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Event</th>
-                <th>Platform</th>
-                <th>Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${allRegistrations.map(r => `
-                <tr>
-                  <td>${r.name}</td>
-                  <td style="color:var(--text-faint)">${r.email}</td>
-                  <td>${r.eventTitle}</td>
-                  <td style="color:var(--text-faint)">${r.platformName}</td>
-                  <td>${formatDate(r.date)}</td>
-                  <td><span class="status-badge status-${r.status}">${r.status}</span></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
+        ${platformStats.map(p => `
+        <div class="dash-platform-block" id="dblock-${p.id}">
+          <div class="dash-platform-row" onclick="togglePlatformBlock('${p.id}')">
+            <div class="dash-pl-left">
+              <span class="dash-pl-icon" style="background:linear-gradient(135deg,${p.colorA},${p.colorB})">${p.icon}</span>
+              <div>
+                <div class="dash-pl-name">${p.name}</div>
+                <div class="dash-pl-meta">${p.categories.map(c => `<span class="tag tag-${c.toLowerCase()}">${c}</span>`).join('')}</div>
+              </div>
+            </div>
+            <div class="dash-pl-right">
+              <span class="dash-pl-stat"><strong>${p.evList.length}</strong> events</span>
+              <span class="dash-pl-stat"><strong>${p.regs}</strong> registrations</span>
+              <button class="btn btn-outline btn-sm"
+                onclick="event.stopPropagation();navigate('platform',{platformId:'${p.id}'})">View →</button>
+              <span class="dash-pl-chevron" id="chev-${p.id}">▼</span>
+            </div>
+          </div>
+
+          <div class="dash-platform-body" id="dbody-${p.id}" style="display:none">
+            ${p.evList.length === 0
+              ? `<div class="dash-empty">No events yet.
+                   <button class="btn-link" onclick="openCreateEventPanel('${p.id}')">Create one →</button>
+                 </div>`
+              : p.evList.map(ev => {
+                  const st  = getEventStatus(ev);
+                  const pct = ev.maxSpots ? Math.round((ev.filledSpots / ev.maxSpots) * 100) : 0;
+                  return `
+                <div class="dash-event-block">
+                  <div class="dash-event-header">
+                    <div class="dash-event-header-left">
+                      <span class="event-category-badge ${catBadgeClass(ev.category)}">${catIcon(ev.category)} ${ev.category}</span>
+                      <span class="edp-status-pill edp-status-${st.key}"><span class="edp-status-dot"></span>${st.label}</span>
+                    </div>
+                    <div class="dash-event-meta">
+                      <h3 class="dash-event-title">${ev.title}</h3>
+                      <div class="dash-event-dates">
+                        <span>📅 Opens ${formatDate(ev.registrationStart)}</span>
+                        <span>⏰ Closes ${formatDate(ev.registrationEnd)}</span>
+                        <span>👥 ${ev.registrations.length}${ev.maxSpots ? '/'+ev.maxSpots : ''} registered (${pct}%)</span>
+                      </div>
+                      <div class="dash-cap-bar-track">
+                        <div class="dash-cap-bar-fill"
+                          style="width:${pct}%;background:linear-gradient(90deg,${pct>=90?'var(--danger),#f87171':'var(--success),var(--accent)'})">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="table-wrapper dash-participants-table">
+                    ${ev.registrations.length === 0
+                      ? `<div class="dash-empty">No registrations yet for this event.</div>`
+                      : `<table>
+                          <thead><tr>
+                            <th>#</th><th>Name</th><th>Email</th><th>Phone</th>
+                            <th>Payment File</th><th>Date</th><th>Status</th>
+                          </tr></thead>
+                          <tbody>
+                          ${ev.registrations.map((r,i) => `
+                            <tr>
+                              <td style="color:var(--text-faint)">${i+1}</td>
+                              <td><strong>${r.name}</strong></td>
+                              <td style="color:var(--text-faint)">${r.email}</td>
+                              <td>${r.phone || '—'}</td>
+                              <td style="color:var(--text-faint);font-size:0.75rem">${r.paymentFile || '—'}</td>
+                              <td>${formatDate(r.date)}</td>
+                              <td><span class="status-badge status-${r.status}">${r.status}</span></td>
+                            </tr>`).join('')}
+                          </tbody>
+                        </table>`
+                    }
+                  </div>
+                </div>`;
+                }).join('')
+            }
+          </div>
+        </div>`).join('')}
       </div>
 
     </div>
 
+    <!-- CREATE EVENT SLIDE-IN PANEL -->
+    <div class="dash-panel-overlay" id="dash-panel-overlay"
+      onclick="closeCreateEventPanel()" style="display:none"></div>
+    <div class="dash-panel" id="dash-panel" style="transform:translateX(100%)">
+      <div class="dash-panel-header">
+        <h2 class="dash-panel-title">➕ Create New Event</h2>
+        <button class="dash-panel-close" onclick="closeCreateEventPanel()">✕</button>
+      </div>
+      <div class="dash-panel-body">
+        <form id="create-event-form" novalidate onsubmit="handleCreateEventSubmit(event)">
+
+          <div class="form-group" id="ce-grp-platform">
+            <label class="form-label" for="ce-platform">Platform *</label>
+            <select class="form-select" id="ce-platform">
+              <option value="">Select platform…</option>
+              ${platforms.map(p => `<option value="${p.id}">${p.icon} ${p.name}</option>`).join('')}
+            </select>
+            <div class="form-error" id="ce-err-platform">Please select a platform.</div>
+          </div>
+
+          <div class="form-group" id="ce-grp-title">
+            <label class="form-label" for="ce-title">Event Title *</label>
+            <input class="form-control" id="ce-title" type="text" placeholder="e.g. React Bootcamp 2026" />
+            <div class="form-error" id="ce-err-title">Please enter a title.</div>
+          </div>
+
+          <div class="form-group" id="ce-grp-category">
+            <label class="form-label" for="ce-category">Category *</label>
+            <select class="form-select" id="ce-category">
+              <option value="">Select category…</option>
+              <option value="Tech">⚡ Tech</option>
+              <option value="Sports">🏃 Sports</option>
+              <option value="Cultural">🎨 Cultural</option>
+            </select>
+            <div class="form-error" id="ce-err-category">Please select a category.</div>
+          </div>
+
+          <div class="form-group" id="ce-grp-desc">
+            <label class="form-label" for="ce-desc">Description *</label>
+            <textarea class="form-control" id="ce-desc" rows="3"
+              placeholder="Describe your event…"></textarea>
+            <div class="form-error" id="ce-err-desc">Please add a description.</div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="ce-max">Max Capacity</label>
+              <input class="form-control" id="ce-max" type="number" min="1" placeholder="100" value="100" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ce-vis">Visibility</label>
+              <select class="form-select" id="ce-vis">
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" id="ce-grp-start">
+              <label class="form-label" for="ce-start">Registration Opens *</label>
+              <input class="form-control" id="ce-start" type="datetime-local" />
+              <div class="form-error" id="ce-err-start">Required.</div>
+            </div>
+            <div class="form-group" id="ce-grp-end">
+              <label class="form-label" for="ce-end">Registration Closes *</label>
+              <input class="form-control" id="ce-end" type="datetime-local" />
+              <div class="form-error" id="ce-err-end">Required.</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ce-wa">WhatsApp Group Link</label>
+            <div class="input-with-prefix">
+              <span class="input-prefix">💬</span>
+              <input class="form-control" id="ce-wa" type="url"
+                placeholder="https://chat.whatsapp.com/…" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ce-qr">QR Code Image URL</label>
+            <input class="form-control" id="ce-qr" type="url"
+              placeholder="https://example.com/qr.png" />
+            <div style="font-size:0.72rem;color:var(--text-faint);margin-top:4px">
+              Paste a direct image URL (leave blank for default)
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">
+            🚀 Create Event
+          </button>
+        </form>
+      </div>
+    </div>
+
     <footer class="footer">
       <div class="footer-brand">⚡ EventSphere</div>
-      <p>© 2025 EventSphere. All rights reserved.</p>
+      <p>© 2026 EventSphere. All rights reserved.</p>
     </footer>
   </div>`;
 }
+
+
 
 // ===== DONUT CHART SVG HELPER =====
 function renderDonutChart(segments, total) {
@@ -1199,7 +1293,109 @@ function renderDonutChart(segments, total) {
   return paths;
 }
 
-// ===== ATTACH PAGE EVENTS =====
+// ───────────────────────────────────────────────────────────────────────────
+// DASHBOARD HELPERS
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Toggle a platform accordion open/closed */
+function togglePlatformBlock(platformId) {
+  const body = document.getElementById(`dbody-${platformId}`);
+  const chev = document.getElementById(`chev-${platformId}`);
+  if (!body) return;
+  const opening = body.style.display === 'none';
+  body.style.display = opening ? 'block' : 'none';
+  if (chev) chev.textContent = opening ? '▲' : '▼';
+}
+
+/** Open the Create Event slide-in panel (optionally pre-select a platform) */
+function openCreateEventPanel(presetPlatformId) {
+  const overlay = document.getElementById('dash-panel-overlay');
+  const panel   = document.getElementById('dash-panel');
+  if (overlay) overlay.style.display = 'block';
+  if (panel)   panel.style.transform  = 'translateX(0)';
+  if (presetPlatformId) {
+    const sel = document.getElementById('ce-platform');
+    if (sel) sel.value = presetPlatformId;
+  }
+}
+
+function closeCreateEventPanel() {
+  const overlay = document.getElementById('dash-panel-overlay');
+  const panel   = document.getElementById('dash-panel');
+  if (panel)   panel.style.transform = 'translateX(100%)';
+  if (overlay) overlay.style.display = 'none';
+}
+
+/** Create Event form submission */
+function handleCreateEventSubmit(e) {
+  e.preventDefault();
+  let valid = true;
+
+  const required = [
+    { id: 'ce-platform',  grp: 'ce-grp-platform',  check: v => v !== '' },
+    { id: 'ce-title',     grp: 'ce-grp-title',     check: v => v.trim().length > 1 },
+    { id: 'ce-category',  grp: 'ce-grp-category',  check: v => v !== '' },
+    { id: 'ce-desc',      grp: 'ce-grp-desc',      check: v => v.trim().length > 5 },
+    { id: 'ce-start',     grp: 'ce-grp-start',     check: v => v !== '' },
+    { id: 'ce-end',       grp: 'ce-grp-end',       check: v => v !== '' },
+  ];
+
+  required.forEach(f => {
+    const el  = document.getElementById(f.id);
+    const grp = document.getElementById(f.grp);
+    if (el && grp) {
+      if (!f.check(el.value)) { grp.classList.add('error'); valid = false; }
+      else                     { grp.classList.remove('error'); }
+    }
+  });
+
+  if (!valid) return;
+
+  // Date order check
+  const startVal = document.getElementById('ce-start').value;
+  const endVal   = document.getElementById('ce-end').value;
+  if (new Date(endVal) <= new Date(startVal)) {
+    const eg = document.getElementById('ce-grp-end');
+    const ee = document.getElementById('ce-err-end');
+    if (eg) eg.classList.add('error');
+    if (ee) ee.textContent = 'End must be after start.';
+    return;
+  }
+
+  const platformId = document.getElementById('ce-platform').value;
+
+  // Store.addEvent(platformId, eventData) — 2-arg API
+  const result = Store.addEvent(platformId, {
+    title:             document.getElementById('ce-title').value.trim(),
+    category:          document.getElementById('ce-category').value,
+    description:       document.getElementById('ce-desc').value.trim(),
+    registrationStart: startVal,
+    registrationEnd:   endVal,
+    whatsappLink:      document.getElementById('ce-wa').value.trim() || '',
+    qr:                document.getElementById('ce-qr').value.trim() || 'qr_sample.png',
+    maxSpots:          parseInt(document.getElementById('ce-max').value, 10) || 100,
+    visibility:        document.getElementById('ce-vis').value,
+  });
+
+  if (!result || !result.ok) {
+    showToast(`⚠️ ${result?.error || 'Could not create event.'}`);
+    return;
+  }
+
+  closeCreateEventPanel();
+  showToast(`✅ "${result.event.title}" created!`);
+
+  // Re-render and auto-open the platform accordion
+  renderPage();
+  setTimeout(() => {
+    const body = document.getElementById(`dbody-${platformId}`);
+    if (body && body.style.display === 'none') togglePlatformBlock(platformId);
+    document.getElementById(`dblock-${platformId}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+
 function attachPageEvents() {
   // Form submission
   const form = document.getElementById('reg-form');
