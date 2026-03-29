@@ -214,18 +214,48 @@ const Bookmarks = {
 };
 
 // ===== NAVIGATION =====
-function navigate(page, opts = {}) {
+function navigate(page, opts = {}, skipHistory = false) {
   // Always kill any running countdown first
   if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
 
   currentPage = page;
-  if (opts.platformId) currentPlatformId = opts.platformId;
-  if (opts.eventId)   currentEventId   = opts.eventId;
+  if (opts.platformId !== undefined) currentPlatformId = opts.platformId;
+  if (opts.eventId !== undefined)   currentEventId   = opts.eventId;
+
+  // ── Store current state in localStorage ─────────────────────────────────────
+  localStorage.setItem('es_currentPage', currentPage);
+  if (currentPlatformId) {
+    localStorage.setItem('es_currentPlatformId', currentPlatformId);
+  } else {
+    localStorage.removeItem('es_currentPlatformId');
+  }
+  if (currentEventId) {
+    localStorage.setItem('es_currentEventId', currentEventId);
+  } else {
+    localStorage.removeItem('es_currentEventId');
+  }
+
+  // ── Push State to browser history ───────────────────────────────────────────
+  if (!skipHistory) {
+    let url = "?page=" + page;
+    if (currentPlatformId) url += "&pl=" + currentPlatformId;
+    if (currentEventId) url += "&ev=" + currentEventId;
+    window.history.pushState({ page, platformId: currentPlatformId, eventId: currentEventId }, "", url);
+  }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
   renderPage();
   updateNavActive();
 }
+
+// ── Handle Browser Back/Forward buttons ─────────────────────────────────────
+window.addEventListener('popstate', (e) => {
+  if (e.state) {
+    navigate(e.state.page, { platformId: e.state.platformId, eventId: e.state.eventId }, true);
+  } else {
+    navigate('home', {}, true);
+  }
+});
 
 function updateNavActive() {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
@@ -1718,8 +1748,21 @@ function catIcon(cat) {
 
 // ===== INIT =====
 requestBrowserNotifPermission(); // ask for browser notification permission
-renderPage();
-updateNavActive();
+
+// ── Restore State from URL or LocalStorage ──────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const initPage = params.get('page') || localStorage.getItem('es_currentPage') || 'home';
+const initPl = params.get('pl') || localStorage.getItem('es_currentPlatformId') || null;
+const initEv = params.get('ev') || localStorage.getItem('es_currentEventId') || null;
+
+// Replace the initial history state so the first back button logic works correctly
+let initUrl = "?page=" + initPage;
+if (initPl) initUrl += "&pl=" + initPl;
+if (initEv) initUrl += "&ev=" + initEv;
+window.history.replaceState({ page: initPage, platformId: initPl, eventId: initEv }, "", initUrl);
+
+navigate(initPage, { platformId: initPl, eventId: initEv }, true);
+
 NotifStore._updateBadge();      // restore badge from localStorage on load
 renderNotifPanel();             // populate panel with any stored notifications
 checkEventAlerts();             // queue smart event alerts
