@@ -4,8 +4,200 @@ let currentPlatformId = null;
 let currentEventId = null;
 let _countdownInterval = null; // cleared on every navigate()
 
+// ===== NOTIFICATION STORE =====
+const NOTIF_KEY = 'es_notifications';
+
+const NotifStore = {
+  // Notification types: registration | event_soon | closing_soon | event_updated
+  _read() {
+    try { return JSON.parse(localStorage.getItem(NOTIF_KEY)) || []; }
+    catch { return []; }
+  },
+  _write(items) {
+    localStorage.setItem(NOTIF_KEY, JSON.stringify(items.slice(0, 50))); // cap at 50
+  },
+
+  /** Push a new notification */
+  push({ type = 'info', title, message, eventId = null }) {
+    const items = this._read();
+    items.unshift({
+      id:      Date.now(),
+      type,          // 'registration' | 'event_soon' | 'closing_soon' | 'event_updated' | 'info'
+      title,
+      message,
+      eventId,
+      read:    false,
+      time:    new Date().toISOString(),
+    });
+    this._write(items);
+    this._updateBadge();
+    renderNotifPanel();
+  },
+
+  all()       { return this._read(); },
+  unreadCount(){ return this._read().filter(n => !n.read).length; },
+
+  markAllRead() {
+    const items = this._read().map(n => ({ ...n, read: true }));
+    this._write(items);
+    this._updateBadge();
+  },
+
+  markRead(id) {
+    const items = this._read().map(n => n.id === id ? { ...n, read: true } : n);
+    this._write(items);
+    this._updateBadge();
+  },
+
+  clear() {
+    this._write([]);
+    this._updateBadge();
+  },
+
+  /** Sync the red badge number on the bell */
+  _updateBadge() {
+    const count  = this.unreadCount();
+    const badge  = document.getElementById('notif-badge');
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count > 9 ? '9+' : count;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  },
+
+  /** Map type → icon emoji */
+  icon(type) {
+    return { registration: '✅', event_soon: '⏰', closing_soon: '🔴', event_updated: '📝', info: 'ℹ️' }[type] || '🔔';
+  },
+
+  /** Map type → CSS class */
+  colorClass(type) {
+    return { registration: 'notif-green', event_soon: 'notif-yellow', closing_soon: 'notif-red', event_updated: 'notif-blue', info: 'notif-gray' }[type] || 'notif-gray';
+  },
+};
+
+/** Render/refresh the notification list inside the panel */
+function renderNotifPanel() {
+  const list  = document.getElementById('notif-list');
+  const items = NotifStore.all();
+  NotifStore._updateBadge();
+  if (!list) return;
+  if (items.length === 0) {
+    list.innerHTML = '<div class="notif-empty">You\'re all caught up! 🎉</div>';
+    return;
+  }
+  list.innerHTML = items.map(n => `
+    <div class="notif-item ${n.read ? '' : 'notif-unread'} ${NotifStore.colorClass(n.type)}"
+      onclick="NotifStore.markRead(${n.id});renderNotifPanel();${n.eventId ? `navigate('event',{eventId:'${n.eventId}'});closeNotifPanel();` : ''}">
+      <div class="notif-item-icon">${NotifStore.icon(n.type)}</div>
+      <div class="notif-item-body">
+        <div class="notif-item-title">${n.title}</div>
+        <div class="notif-item-msg">${n.message}</div>
+        <div class="notif-item-time">${_timeAgo(n.time)}</div>
+      </div>
+      ${!n.read ? '<div class="notif-dot"></div>' : ''}
+    </div>`).join('');
+}
+
+function _timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (diff < 60)   return 'Just now';
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400)return `${Math.floor(diff/3600)}h ago`;
+  return new Date(iso).toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+}
+
+/** Toggle notification dropdown */
+function toggleNotifPanel(e) {
+  e.stopPropagation();
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) { NotifStore.markAllRead(); renderNotifPanel(); }
+}
+
+function closeNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+// Close panel when clicking anywhere outside the bell
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('notif-bell-wrap');
+  if (wrap && !wrap.contains(e.target)) closeNotifPanel();
+});
+
+// ===== BROWSER PUSH NOTIFICATIONS =====
+let _browserNotifPermission = Notification?.permission || 'default';
+
+function requestBrowserNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then(p => { _browserNotifPermission = p; });
+  }
+}
+
+function showBrowserNotification(title, body, { icon = '🔔', tag } = {}) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  try {
+    new Notification(title, { body, icon: '/favicon.ico', tag });
+  } catch (_) { /* silently ignore unsupported contexts */ }
+}
+
+// ===== SMART EVENT ALERTS =====
+// Called once on load — checks all events and queues alerts
+function checkEventAlerts() {
+  const now = Date.now();
+  const SOON_MS     = 24 * 60 * 60 * 1000;  // 24 h → "starting soon"
+  const CLOSING_MS  =  2 * 60 * 60 * 1000;  // 2 h  → "closing soon"
+
+  events.forEach(ev => {
+    const start = new Date(ev.registrationStart).getTime();
+    const end   = new Date(ev.registrationEnd).getTime();
+    const alertedKey = `es_alerted_${ev.id}`;
+
+    // Already alerted this session? skip.
+    if (sessionStorage.getItem(alertedKey)) return;
+
+    const msToStart = start - now;
+    const msToEnd   = end   - now;
+
+    if (msToStart > 0 && msToStart <= SOON_MS) {
+      // Event registration opening within 24 h
+      NotifStore.push({
+        type:    'event_soon',
+        title:   'Event Starting Soon 🎉',
+        message: `"${ev.title}" registration opens in ${_fmtDuration(msToStart)}.`,
+        eventId: ev.id,
+      });
+      sessionStorage.setItem(alertedKey, '1');
+    } else if (now >= start && msToEnd > 0 && msToEnd <= CLOSING_MS) {
+      // Event registration closing within 2 h
+      NotifStore.push({
+        type:    'closing_soon',
+        title:   'Registration Closing Soon ⚠️',
+        message: `"${ev.title}" closes in ${_fmtDuration(msToEnd)}. Register now!`,
+        eventId: ev.id,
+      });
+      sessionStorage.setItem(alertedKey, '1');
+    }
+  });
+}
+
+function _fmtDuration(ms) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
 // ===== BOOKMARK STORE =====
 const BOOKMARK_KEY = 'es_bookmarks';
+
 const Bookmarks = {
   _ids() {
     try { return JSON.parse(localStorage.getItem(BOOKMARK_KEY)) || []; }
@@ -1385,6 +1577,14 @@ function handleCreateEventSubmit(e) {
   closeCreateEventPanel();
   showToast(`✅ "${result.event.title}" created!`);
 
+  // Notify the organizer
+  NotifStore.push({
+    type:    'event_updated',
+    title:   'Event Created 📝',
+    message: `"${result.event.title}" has been added successfully.`,
+    eventId: result.event.id,
+  });
+
   // Re-render and auto-open the platform accordion
   renderPage();
   setTimeout(() => {
@@ -1476,9 +1676,25 @@ function handleFormSubmit(e) {
     return;
   }
 
-  // ── Show success screen ──────────────────────────────────────────────────────
+  // ── Notification: registration confirmed ────────────────────────────────────
   const event    = getEventById(currentEventId);
   const platform = getPlatformById(event?.platformId || currentPlatformId);
+
+  NotifStore.push({
+    type:    'registration',
+    title:   'Registration Successful! 🎉',
+    message: `You're registered for "${event?.title || 'the event'}". Check WhatsApp for updates.`,
+    eventId: currentEventId,
+  });
+
+  // Browser push notification
+  showBrowserNotification(
+    'Registration Confirmed ✅',
+    `You're in for "${event?.title || 'the event'}"! See you there.`,
+    { tag: `reg-${currentEventId}` }
+  );
+
+  // ── Show success screen ──────────────────────────────────────────────────────
   showSuccessScreen(event?.whatsappLink, currentEventId, platform?.id || currentPlatformId);
 }
 
@@ -1501,5 +1717,9 @@ function catIcon(cat) {
 }
 
 // ===== INIT =====
+requestBrowserNotifPermission(); // ask for browser notification permission
 renderPage();
 updateNavActive();
+NotifStore._updateBadge();      // restore badge from localStorage on load
+renderNotifPanel();             // populate panel with any stored notifications
+checkEventAlerts();             // queue smart event alerts
