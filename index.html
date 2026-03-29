@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EventSphere — Community Event Management</title>
-  <meta name="description" content="Discover and join community events across tech, sports, and cultural categories hosted by multiple organizations." />
+  <title>NexEvent — Smart Event Management Platform</title>
+  <meta name="description"
+    content="NexEvent is a smart event management platform to discover, join and organise community events across tech, sports and culture." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
   <!-- NAV -->
   <nav class="navbar" id="navbar">
@@ -17,17 +22,17 @@
       <a class="nav-brand" href="#" id="nav-home-link">
         <div class="nav-logo">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <circle cx="14" cy="14" r="14" fill="url(#grad1)"/>
-            <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="14" cy="14" r="14" fill="url(#grad1)" />
+            <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
             <defs>
               <linearGradient id="grad1" x1="0" y1="0" x2="28" y2="28">
-                <stop offset="0%" stop-color="#6366f1"/>
-                <stop offset="100%" stop-color="#8b5cf6"/>
+                <stop offset="0%" stop-color="#6366f1" />
+                <stop offset="100%" stop-color="#8b5cf6" />
               </linearGradient>
             </defs>
           </svg>
         </div>
-        EventSphere
+        <span class="nav-brand-text">NexEvent</span>
       </a>
 
       <!-- Nav links + bell grouped on the right -->
@@ -46,8 +51,7 @@
 
         <!-- Notification Bell -->
         <div class="notif-bell-wrap" id="notif-bell-wrap">
-          <button class="notif-bell" id="notif-bell" aria-label="Notifications"
-            onclick="toggleNotifPanel(event)">
+          <button class="notif-bell" id="notif-bell" aria-label="Notifications" onclick="toggleNotifPanel(event)">
             🔔
             <span class="notif-badge" id="notif-badge" style="display:none">0</span>
           </button>
@@ -100,4 +104,5 @@
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
+
 </html>

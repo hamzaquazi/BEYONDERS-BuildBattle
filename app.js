@@ -5,10 +5,10 @@ let currentEventId = null;
 let _countdownInterval = null; // cleared on every navigate()
 
 // ===== AUTH STATE =====
-let currentUser = JSON.parse(localStorage.getItem('es_user')) || null;
+let currentUser = JSON.parse(localStorage.getItem('nex_user')) || null;
 
 // ===== NOTIFICATION STORE =====
-const NOTIF_KEY = 'es_notifications';
+const NOTIF_KEY = 'nex_notifications';
 
 const NotifStore = {
   // Notification types: registration | event_soon | closing_soon | event_updated
@@ -199,7 +199,7 @@ function _fmtDuration(ms) {
 }
 
 // ===== BOOKMARK STORE =====
-const BOOKMARK_KEY = 'es_bookmarks';
+const BOOKMARK_KEY = 'nex_bookmarks';
 
 const Bookmarks = {
   _ids() {
@@ -241,16 +241,16 @@ function navigate(page, opts = {}, skipHistory = false) {
   if (opts.eventId !== undefined)   currentEventId   = opts.eventId;
 
   // ── Store current state in localStorage ─────────────────────────────────────
-  localStorage.setItem('es_currentPage', currentPage);
+  localStorage.setItem('nex_currentPage', currentPage);
   if (currentPlatformId) {
-    localStorage.setItem('es_currentPlatformId', currentPlatformId);
+    localStorage.setItem('nex_currentPlatformId', currentPlatformId);
   } else {
-    localStorage.removeItem('es_currentPlatformId');
+    localStorage.removeItem('nex_currentPlatformId');
   }
   if (currentEventId) {
-    localStorage.setItem('es_currentEventId', currentEventId);
+    localStorage.setItem('nex_currentEventId', currentEventId);
   } else {
-    localStorage.removeItem('es_currentEventId');
+    localStorage.removeItem('nex_currentEventId');
   }
 
   // ── Push State to browser history ───────────────────────────────────────────
@@ -365,9 +365,9 @@ function renderHome() {
     <section class="hero">
       <div class="hero-bg"></div>
       <div class="hero-content">
-        <div class="hero-badge">Live Community Events</div>
+        <div class="hero-badge">⚡ NexEvent &mdash; Smart Event Management</div>
         <h1>Discover Events<br/>That Move You</h1>
-        <p>Explore events across technology, sports &amp; culture hosted by top community organizations across the country.</p>
+        <p>NexEvent connects students and communities with live events across technology, sports &amp; culture &mdash; all in one place.</p>
         <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
           <button class="btn btn-primary" style="width:auto;padding:13px 32px;" onclick="document.getElementById('platforms-section').scrollIntoView({behavior:'smooth'})">
             Explore Platforms <span>→</span>
@@ -473,8 +473,9 @@ function renderHome() {
     </section>
 
     <footer class="footer">
-      <div class="footer-brand">⚡ EventSphere</div>
-      <p>© 2026 EventSphere. All rights reserved. Built with ❤️ for communities.</p>
+      <div class="footer-brand">⚡ NexEvent</div>
+      <p class="footer-tagline">Smart Event Management Platform</p>
+      <p>© 2026 NexEvent. All rights reserved. Built with ❤️ for communities.</p>
     </footer>
   </div>`;
 }
@@ -772,8 +773,8 @@ function renderPlatformPage() {
     </div>
 
     <footer class="footer">
-      <div class="footer-brand">⚡ EventSphere</div>
-      <p>© 2026 EventSphere. All rights reserved.</p>
+      <div class="footer-brand">⚡ NexEvent</div>
+      <p>© 2026 NexEvent. All rights reserved.</p>
     </footer>
   </div>`;
 }
@@ -1012,13 +1013,17 @@ function renderEventDetail() {
           </div>
 
           <!-- ── QR Code ── -->
-          <div class="sidebar-title" style="margin:20px 0 12px">📱 Scan to Join</div>
+          <div class="sidebar-title" style="margin:20px 0 12px">💳 Payment QR Code</div>
           <div class="qr-wrapper" id="qr-wrapper">
             <img
-              src="${event.qr || 'qr_sample.png'}"
+              src="${event.qrImage || event.qr || 'qr_sample.png'}"
               alt="QR Code for ${event.title}"
               onerror="this.closest('#qr-wrapper').innerHTML='<div class=\\'qr-placeholder\\'><div class=\\'qr-placeholder-icon\\'>📷</div><div>QR Code Unavailable</div></div>'"
             />
+          </div>
+          <div class="qr-payment-instruction">
+            <span class="qr-instruction-icon">📲</span>
+            <span>Scan QR to pay, then upload payment screenshot during registration</span>
           </div>
 
           <!-- ── CTAs ── -->
@@ -1055,8 +1060,8 @@ function renderEventDetail() {
     </div>
 
     <footer class="footer">
-      <div class="footer-brand">⚡ EventSphere</div>
-      <p>© 2026 EventSphere. All rights reserved.</p>
+      <div class="footer-brand">⚡ NexEvent</div>
+      <p>© 2026 NexEvent. All rights reserved.</p>
     </footer>
   </div>`;
 }
@@ -1108,7 +1113,7 @@ function startCountdown(eventId) {
 }
 
 // ===== REGISTRATION FORM PAGE =====
-const PROFILE_KEY = 'es_user_profile';
+const PROFILE_KEY = 'nex_user_profile';
 
 function _loadSavedProfile() {
   try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); }
@@ -1168,6 +1173,17 @@ function renderRegisterPage() {
 
         ${saved ? `<div class="autofill-banner" id="autofill-banner">
           <span>✨ We remembered your details! <a href="#" onclick="clearAutofill();return false;">Clear</a></span>
+        </div>` : ''}
+
+        ${event.qrImage || event.qr ? `
+        <div class="reg-qr-section">
+          <div class="reg-qr-image-wrap">
+            <img src="${event.qrImage || event.qr}" alt="Payment QR" onerror="this.parentElement.style.display='none'" />
+          </div>
+          <div class="reg-qr-info">
+            <div class="reg-qr-title">💳 Scan & Pay First</div>
+            <div class="reg-qr-desc">Scan the QR code using any UPI app to complete payment, then upload your payment screenshot below.</div>
+          </div>
         </div>` : ''}
 
         <form id="reg-form" novalidate>
@@ -1232,13 +1248,19 @@ function renderRegisterPage() {
 
           <!-- Payment screenshot upload -->
           <div class="form-group" id="grp-payment">
-            <label class="form-label" for="payment">Payment Screenshot *</label>
+            <label class="form-label" for="payment">Upload Payment Screenshot *</label>
             <div class="file-upload-zone" id="file-zone" onclick="document.getElementById('payment').click()">
-              <div class="file-upload-icon">📸</div>
+              <div class="file-upload-icon" id="file-icon">📸</div>
               <div class="file-upload-text" id="file-label">Click to upload or drag & drop</div>
               <div class="file-upload-hint">PNG, JPG or PDF · Max 5 MB</div>
               <input type="file" id="payment" accept="image/*,.pdf"
                 style="display:none" onchange="handleFileSelect(this)" />
+            </div>
+            <!-- Image preview after upload -->
+            <div class="payment-preview" id="payment-preview" style="display:none">
+              <img id="payment-preview-img" src="" alt="Payment screenshot preview" />
+              <button type="button" class="payment-preview-remove" onclick="removePaymentFile()">
+              </button>
             </div>
             <div class="form-error" id="err-payment">Please upload your payment screenshot.</div>
           </div>
@@ -1264,8 +1286,8 @@ function renderRegisterPage() {
     </div>
 
     <footer class="footer">
-      <div class="footer-brand">⚡ EventSphere</div>
-      <p>© 2025 EventSphere. All rights reserved.</p>
+      <div class="footer-brand">⚡ NexEvent</div>
+      <p>© 2025 NexEvent. All rights reserved.</p>
     </footer>
   </div>`;
 }
@@ -1441,7 +1463,7 @@ function renderDashboard() {
                               <td><strong>${r.type === 'team' ? `${r.leader?.name} <span class="event-category-badge tag-all" style="font-size:0.65rem;padding:2px 6px">+${r.members?.length}👥</span>` : r.name}</strong></td>
                               <td style="color:var(--text-faint)">${r.type === 'team' ? r.leader?.email : r.email}</td>
                               <td>${(r.type === 'team' ? r.leader?.phone : r.phone) || '—'}</td>
-                              <td style="color:var(--text-faint);font-size:0.75rem">${r.paymentFile || '—'}</td>
+                              <td style="font-size:0.75rem">${r.paymentProof ? `<a href="${r.paymentProof}" target="_blank" style="color:var(--primary-light);text-decoration:none;font-weight:600">📎 View Proof</a>` : (r.paymentFile ? `<span style="color:var(--text-faint)">${r.paymentFile}</span>` : '<span style="color:var(--text-faint)">—</span>')}</td>
                               <td>${formatDate(r.date)}</td>
                               <td><span class="status-badge status-${r.status}">${r.status}</span></td>
                             </tr>`).join('')}
@@ -1552,12 +1574,18 @@ function renderDashboard() {
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="ce-qr">QR Code Image URL</label>
-            <input class="form-control" id="ce-qr" type="url"
-              placeholder="https://example.com/qr.png" />
-            <div style="font-size:0.72rem;color:var(--text-faint);margin-top:4px">
-              Paste a direct image URL (leave blank for default)
+          <div class="form-group" id="ce-grp-qr">
+            <label class="form-label" for="ce-qr-file">QR Code Image <span style="color:var(--text-faint);font-weight:400;font-size:0.7rem">(optional)</span></label>
+            <div class="ce-qr-upload-zone" id="ce-qr-zone" onclick="document.getElementById('ce-qr-file').click()">
+              <div class="ce-qr-upload-icon" id="ce-qr-icon">📷</div>
+              <div class="ce-qr-upload-text" id="ce-qr-label">Click to upload QR image</div>
+              <div style="font-size:0.7rem;color:var(--text-faint);margin-top:4px">PNG, JPG, SVG · Max 2 MB</div>
+              <input type="file" id="ce-qr-file" accept="image/*"
+                style="display:none" onchange="handleQRImageSelect(this)" />
+            </div>
+            <div class="ce-qr-preview" id="ce-qr-preview" style="display:none">
+              <img id="ce-qr-preview-img" src="" alt="QR preview" />
+              <button type="button" class="payment-preview-remove" onclick="removeQRImage()">✕ Remove</button>
             </div>
           </div>
 
@@ -1569,8 +1597,8 @@ function renderDashboard() {
     </div>
 
     <footer class="footer">
-      <div class="footer-brand">⚡ EventSphere</div>
-      <p>© 2026 EventSphere. All rights reserved.</p>
+      <div class="footer-brand">⚡ NexEvent</div>
+      <p>© 2026 NexEvent. All rights reserved.</p>
     </footer>
   </div>`;
 }
@@ -1675,6 +1703,7 @@ function handleCreateEventSubmit(e) {
   const platformId = document.getElementById('ce-platform').value;
   const eventType = document.getElementById('ce-type').value;
   const teamSize = eventType === 'team' ? (parseInt(document.getElementById('ce-size').value, 10) || 4) : 1;
+  const qrImageData = window._ceQrImageData || '';
 
   // Store.addEvent(platformId, eventData) — 2-arg API
   const result = Store.addEvent(platformId, {
@@ -1686,7 +1715,8 @@ function handleCreateEventSubmit(e) {
     eventType:         eventType,
     teamSize:          teamSize,
     whatsappLink:      document.getElementById('ce-wa').value.trim() || '',
-    qr:                document.getElementById('ce-qr').value.trim() || 'qr_sample.png',
+    qrImage:           qrImageData,
+    qr:                qrImageData || 'qr_sample.png',
     maxSpots:          parseInt(document.getElementById('ce-max').value, 10) || 100,
     visibility:        document.getElementById('ce-vis').value,
   });
@@ -1696,6 +1726,8 @@ function handleCreateEventSubmit(e) {
     return;
   }
 
+  // Reset QR image data
+  window._ceQrImageData = null;
   closeCreateEventPanel();
   showToast(`✅ "${result.event.title}" created!`);
 
@@ -1809,6 +1841,7 @@ function handleFormSubmit(e) {
   const email     = document.getElementById('email').value.trim();
   const phone     = document.getElementById('phone').value.trim();
   const fileName  = paymentInput?.files?.[0]?.name || '';
+  const paymentProof = window._paymentProofBase64 || '';
 
   // ── Autofill save ───────────────────────────────────────────────────────────
   _saveProfile({ firstName, lastName, email, phone });
@@ -1823,6 +1856,7 @@ function handleFormSubmit(e) {
       members: membersData,
       userMobile: currentUser?.mobile || phone,
       paymentFile: fileName,
+      paymentProof: paymentProof,
       status: 'Pending',
     };
   } else {
@@ -1833,9 +1867,13 @@ function handleFormSubmit(e) {
       phone,
       userMobile: currentUser?.mobile || phone,
       paymentFile: fileName,
+      paymentProof: paymentProof,
       status: 'Pending',
     };
   }
+
+  // Clear the stored base64 after use
+  window._paymentProofBase64 = null;
 
   const result = Store.registerUser(currentEventId, payloadStr);
 
@@ -1865,97 +1903,532 @@ function handleFormSubmit(e) {
   showSuccessScreen(event?.whatsappLink, currentEventId, platform?.id || currentPlatformId);
 }
 
+// ===== FILE UPLOAD HELPERS =====
+
+/** Handle payment screenshot file selection — reads as base64 and shows preview */
+function handleFileSelect(input) {
+  const file = input?.files?.[0];
+  const zone  = document.getElementById('file-zone');
+  const label = document.getElementById('file-label');
+  const icon  = document.getElementById('file-icon');
+  const preview     = document.getElementById('payment-preview');
+  const previewImg  = document.getElementById('payment-preview-img');
+  const grp = document.getElementById('grp-payment');
+
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('⚠️ File is too large. Max 5 MB allowed.');
+    input.value = '';
+    return;
+  }
+
+  // Update zone state
+  if (zone)  zone.classList.add('has-file');
+  if (label) label.textContent = file.name;
+  if (icon)  icon.textContent = '✅';
+  if (grp)   grp.classList.remove('error');
+
+  // Read as base64 for storage + preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    window._paymentProofBase64 = e.target.result;
+    if (preview && previewImg) {
+      if (file.type.startsWith('image/')) {
+        previewImg.src = e.target.result;
+        preview.style.display = 'flex';
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+/** Remove the selected payment file */
+function removePaymentFile() {
+  const input = document.getElementById('payment');
+  const zone  = document.getElementById('file-zone');
+  const label = document.getElementById('file-label');
+  const icon  = document.getElementById('file-icon');
+  const preview = document.getElementById('payment-preview');
+
+  if (input) input.value = '';
+  if (zone)  zone.classList.remove('has-file');
+  if (label) label.textContent = 'Click to upload or drag & drop';
+  if (icon)  icon.textContent  = '📸';
+  if (preview) preview.style.display = 'none';
+  window._paymentProofBase64 = null;
+}
+
+/** Handle QR image selection in the Create Event panel */
+function handleQRImageSelect(input) {
+  const file = input?.files?.[0];
+  const zone    = document.getElementById('ce-qr-zone');
+  const label   = document.getElementById('ce-qr-label');
+  const icon    = document.getElementById('ce-qr-icon');
+  const preview = document.getElementById('ce-qr-preview');
+  const prevImg = document.getElementById('ce-qr-preview-img');
+
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) {
+    showToast('⚠️ QR image too large. Max 2 MB.');
+    input.value = '';
+    return;
+  }
+
+  if (zone)  zone.classList.add('has-file');
+  if (label) label.textContent = file.name;
+  if (icon)  icon.textContent  = '✅';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    window._ceQrImageData = e.target.result;
+    if (preview && prevImg) {
+      prevImg.src = e.target.result;
+      preview.style.display = 'flex';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+/** Remove QR image in Create Event panel */
+function removeQRImage() {
+  const input   = document.getElementById('ce-qr-file');
+  const zone    = document.getElementById('ce-qr-zone');
+  const label   = document.getElementById('ce-qr-label');
+  const icon    = document.getElementById('ce-qr-icon');
+  const preview = document.getElementById('ce-qr-preview');
+
+  if (input) input.value = '';
+  if (zone)  zone.classList.remove('has-file');
+  if (label) label.textContent = 'Click to upload QR image';
+  if (icon)  icon.textContent  = '📷';
+  if (preview) preview.style.display = 'none';
+  window._ceQrImageData = null;
+}
+
+/** Clear autofill profile data */
+function clearAutofill() {
+  localStorage.removeItem(PROFILE_KEY);
+  const banner = document.getElementById('autofill-banner');
+  if (banner) banner.style.display = 'none';
+  // Clear field values
+  ['firstname','lastname','email','phone'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  showToast('Saved details cleared');
+}
+
+/** Show the registration success screen */
+function showSuccessScreen(whatsappLink, eventId, platformId) {
+  const card = document.getElementById('reg-form-card');
+  if (!card) return;
+  card.innerHTML = `
+  <div class="reg-success">
+    <div class="reg-success-icon">🎉</div>
+    <div class="reg-success-title">Registration Confirmed!</div>
+    <p class="reg-success-msg">
+      Your registration is complete and your payment proof has been submitted.
+      The organizer will verify your payment and confirm your spot.
+    </p>
+    <div class="reg-success-actions">
+      ${whatsappLink ? `
+      <a class="btn btn-whatsapp reg-success-wa" href="${whatsappLink}" target="_blank" rel="noopener">
+        💬 Join WhatsApp Group
+      </a>` : ''}
+      <button class="btn btn-primary" onclick="navigate('event',{eventId:'${eventId}',platformId:'${platformId}'})">
+        📋 View Event Details
+      </button>
+      <button class="btn btn-ghost" onclick="navigate('home')">
+        ← Back to Home
+      </button>
+    </div>
+  </div>`;
+}
+
 // ===== FIREBASE AUTH & LOGIN FLOW =====
+
+// ── Auth Page State ──────────────────────────────────────────────────────────
+let _authMode = 'login'; // 'login' | 'signup'
 
 function renderLogin() {
   return `
-    <section class="page container" style="display:flex; justify-content:center; align-items:center; min-height:80vh">
-      <div class="card" style="width:100%; max-width:400px; padding:32px;">
-        <h2 style="margin-bottom:8px">Welcome to EventSphere</h2>
-        <p class="text-muted" style="margin-bottom:24px">Enter your mobile number to continue.</p>
-        
-        <form onsubmit="attemptLogin(event)">
-          <div class="form-group">
-            <label>Mobile Number</label>
-            <input type="tel" id="log-mobile" class="input" placeholder="e.g. 9876543210" required pattern="[0-9]{10}" />
-          </div>
-          
-          <div class="form-group">
-            <label>I am a...</label>
-            <select id="log-role" class="input">
-              <option value="student">Student / Participant</option>
-              <option value="organizer">Event Organizer</option>
-            </select>
-          </div>
+  <div class="auth-page">
+    <div class="auth-bg">
+      <div class="auth-bg-orb auth-bg-orb-1"></div>
+      <div class="auth-bg-orb auth-bg-orb-2"></div>
+      <div class="auth-bg-orb auth-bg-orb-3"></div>
+    </div>
 
-          <div class="form-group" id="log-name-group" style="display:none; animation: pageFadeIn 0.3s ease;">
-            <label>We don't recognize this number. What's your name?</label>
-            <input type="text" id="log-name" class="input" placeholder="Your full name" />
-          </div>
+    <div class="auth-card" id="auth-card">
 
-          <button type="submit" class="btn btn-primary" id="log-btn" style="width:100%; margin-top:8px">Continue</button>
-        </form>
+      <!-- Brand -->
+      <div class="auth-brand">
+        <div class="auth-brand-logo">
+          <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="14" fill="url(#authGrad)"/>
+            <path d="M8 14l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="authGrad" x1="0" y1="0" x2="28" y2="28">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="auth-brand-text-wrap">
+          <span class="auth-brand-name">NexEvent</span>
+          <span class="auth-brand-tagline">Smart Event Management Platform</span>
+        </div>
       </div>
-    </section>
-  `;
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs" id="auth-tabs">
+        <button class="auth-tab ${_authMode === 'login' ? 'active' : ''}"
+          id="tab-login" onclick="switchAuthMode('login')">Log In</button>
+        <button class="auth-tab ${_authMode === 'signup' ? 'active' : ''}"
+          id="tab-signup" onclick="switchAuthMode('signup')">Sign Up</button>
+        <div class="auth-tab-indicator" id="auth-tab-indicator"
+          style="transform:translateX(${_authMode === 'login' ? '0%' : '100%'})"></div>
+      </div>
+
+      <!-- ══════════ LOGIN FORM ══════════ -->
+      <div class="auth-form-wrap" id="auth-login-wrap"
+        style="display:${_authMode === 'login' ? 'block' : 'none'}">
+
+        <div class="auth-heading">
+          <h1 class="auth-title">Welcome back 👋</h1>
+          <p class="auth-subtitle">Log in to your NexEvent account</p>
+        </div>
+
+        <div class="auth-error" id="login-error" style="display:none"></div>
+
+        <form id="login-form" novalidate onsubmit="handleLogin(event)">
+          <div class="auth-field" id="lf-mobile">
+            <label class="auth-label" for="l-mobile">Mobile Number</label>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon">📱</span>
+              <input class="auth-input" id="l-mobile" type="tel"
+                placeholder="10-digit mobile number" maxlength="10"
+                autocomplete="tel" inputmode="numeric" />
+            </div>
+            <div class="auth-field-error" id="lerr-mobile">Enter a valid 10-digit number.</div>
+          </div>
+
+          <div class="auth-field" id="lf-password">
+            <label class="auth-label" for="l-password">Password</label>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon">🔒</span>
+              <input class="auth-input" id="l-password" type="password"
+                placeholder="Your password" autocomplete="current-password" />
+              <button type="button" class="auth-toggle-pw" tabindex="-1"
+                onclick="togglePasswordVisibility('l-password', this)" aria-label="Show password">👁</button>
+            </div>
+            <div class="auth-field-error" id="lerr-password">Please enter your password.</div>
+          </div>
+
+          <div class="auth-field" id="lf-role">
+            <label class="auth-label" for="l-role">I am a</label>
+            <div class="auth-select-wrap">
+              <span class="auth-input-icon">🎭</span>
+              <select class="auth-select" id="l-role">
+                <option value="student">Student / Participant</option>
+                <option value="organizer">Event Organizer</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="auth-btn auth-btn-primary" id="login-btn">
+            <span id="login-btn-text">Log In</span>
+            <span class="auth-btn-spinner" id="login-spinner" style="display:none"></span>
+          </button>
+        </form>
+
+        <p class="auth-switch-text">
+          Don't have an account?
+          <button class="auth-link" onclick="switchAuthMode('signup')">Create Account</button>
+        </p>
+      </div>
+
+      <!-- ══════════ SIGNUP FORM ══════════ -->
+      <div class="auth-form-wrap" id="auth-signup-wrap"
+        style="display:${_authMode === 'signup' ? 'block' : 'none'}">
+
+        <div class="auth-heading">
+          <h1 class="auth-title">Join NexEvent ✨</h1>
+          <p class="auth-subtitle">Create your free account in seconds</p>
+        </div>
+
+        <div class="auth-error" id="signup-error" style="display:none"></div>
+
+        <form id="signup-form" novalidate onsubmit="handleSignup(event)">
+          <div class="auth-field" id="sf-name">
+            <label class="auth-label" for="s-name">Full Name</label>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon">👤</span>
+              <input class="auth-input" id="s-name" type="text"
+                placeholder="Your full name" autocomplete="name" />
+            </div>
+            <div class="auth-field-error" id="serr-name">Please enter your name.</div>
+          </div>
+
+          <div class="auth-field" id="sf-email">
+            <label class="auth-label" for="s-email">Email Address</label>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon">✉️</span>
+              <input class="auth-input" id="s-email" type="email"
+                placeholder="you@example.com" autocomplete="email" />
+            </div>
+            <div class="auth-field-error" id="serr-email">Enter a valid email address.</div>
+          </div>
+
+          <div class="auth-field" id="sf-mobile">
+            <label class="auth-label" for="s-mobile">Mobile Number</label>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon">📱</span>
+              <input class="auth-input" id="s-mobile" type="tel"
+                placeholder="10-digit mobile number" maxlength="10"
+                autocomplete="tel" inputmode="numeric" />
+            </div>
+            <div class="auth-field-error" id="serr-mobile">Enter a valid 10-digit number.</div>
+          </div>
+
+          <div class="auth-field" id="sf-password">
+            <label class="auth-label" for="s-password">Password</label>
+            <div class="auth-input-wrap">
+              <span class="auth-input-icon">🔒</span>
+              <input class="auth-input" id="s-password" type="password"
+                placeholder="Create a password (min 6 chars)" autocomplete="new-password" />
+              <button type="button" class="auth-toggle-pw" tabindex="-1"
+                onclick="togglePasswordVisibility('s-password', this)" aria-label="Show password">👁</button>
+            </div>
+            <div class="auth-field-error" id="serr-password">Password must be at least 6 characters.</div>
+          </div>
+
+          <div class="auth-field" id="sf-role">
+            <label class="auth-label" for="s-role">I am a</label>
+            <div class="auth-select-wrap">
+              <span class="auth-input-icon">🎭</span>
+              <select class="auth-select" id="s-role">
+                <option value="student">Student / Participant</option>
+                <option value="organizer">Event Organizer</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="auth-btn auth-btn-primary" id="signup-btn">
+            <span id="signup-btn-text">Create Account</span>
+            <span class="auth-btn-spinner" id="signup-spinner" style="display:none"></span>
+          </button>
+        </form>
+
+        <p class="auth-switch-text">
+          Already have an account?
+          <button class="auth-link" onclick="switchAuthMode('login')">Log In</button>
+        </p>
+      </div>
+
+    </div><!-- /.auth-card -->
+  </div><!-- /.auth-page -->`;
 }
 
-async function attemptLogin(e) {
+// ── Switch between login and signup tabs ─────────────────────────────────────
+function switchAuthMode(mode) {
+  _authMode = mode;
+
+  const loginWrap  = document.getElementById('auth-login-wrap');
+  const signupWrap = document.getElementById('auth-signup-wrap');
+  const tabLogin   = document.getElementById('tab-login');
+  const tabSignup  = document.getElementById('tab-signup');
+  const indicator  = document.getElementById('auth-tab-indicator');
+
+  if (!loginWrap) { navigate('login'); return; }
+
+  // Animate out
+  const hideEl = mode === 'login' ? signupWrap : loginWrap;
+  const showEl = mode === 'login' ? loginWrap  : signupWrap;
+
+  hideEl.style.display = 'none';
+  showEl.style.display = 'block';
+  showEl.classList.add('auth-form-appear');
+  setTimeout(() => showEl.classList.remove('auth-form-appear'), 400);
+
+  tabLogin.classList.toggle('active',  mode === 'login');
+  tabSignup.classList.toggle('active', mode === 'signup');
+  if (indicator) indicator.style.transform = `translateX(${mode === 'login' ? '0%' : '100%'})`;
+
+  // Clear errors
+  ['login-error', 'signup-error'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; el.textContent = ''; }
+  });
+}
+
+// ── Toggle password visibility ───────────────────────────────────────────────
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.textContent = isHidden ? '🙈' : '👁';
+}
+
+// ── Show inline error banner ─────────────────────────────────────────────────
+function _showAuthError(bannerId, msg) {
+  const el = document.getElementById(bannerId);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'flex';
+  el.classList.add('shake');
+  setTimeout(() => el.classList.remove('shake'), 500);
+}
+
+// ── Field validation helpers ──────────────────────────────────────────────────
+function _validateField(fieldId, errId, isValid) {
+  const grp = document.getElementById(fieldId);
+  if (grp) grp.classList.toggle('error', !isValid);
+  return isValid;
+}
+
+// ── Set button loading state ─────────────────────────────────────────────────
+function _setAuthLoading(btnId, spinnerId, textId, loading, label) {
+  const btn = document.getElementById(btnId);
+  const sp  = document.getElementById(spinnerId);
+  const tx  = document.getElementById(textId);
+  if (btn) btn.disabled = loading;
+  if (sp)  sp.style.display = loading ? 'inline-block' : 'none';
+  if (tx)  tx.textContent = loading ? 'Please wait…' : label;
+}
+
+// ── LOGIN handler ─────────────────────────────────────────────────────────────
+async function handleLogin(e) {
   e.preventDefault();
-  const mobile = document.getElementById('log-mobile').value.trim();
-  const role   = document.getElementById('log-role').value;
-  const btn    = document.getElementById('log-btn');
-  const nameGrp = document.getElementById('log-name-group');
-  
-  // Wait for Firebase to be ready if it's lagging
+
+  const mobile   = document.getElementById('l-mobile')?.value.trim() || '';
+  const password = document.getElementById('l-password')?.value || '';
+  const role     = document.getElementById('l-role')?.value || 'student';
+
+  // Clear previous error
+  document.getElementById('login-error').style.display = 'none';
+
+  // Validate
+  let ok = true;
+  ok = _validateField('lf-mobile',   'lerr-mobile',   /^\d{10}$/.test(mobile))   && ok;
+  ok = _validateField('lf-password', 'lerr-password', password.length > 0)        && ok;
+  if (!ok) return;
+
   if (!window.FirebaseStore) {
-    showToast('Firebase is initializing, please wait...');
+    _showAuthError('login-error', '⚠️ Firebase is not ready yet. Please wait a moment.');
     return;
   }
 
-  btn.textContent = 'Checking...';
-  btn.disabled = true;
+  _setAuthLoading('login-btn', 'login-spinner', 'login-btn-text', true, 'Log In');
 
-  if (nameGrp.style.display === 'block') {
-    // Phase 2: Create user
-    const name = document.getElementById('log-name').value.trim();
-    if (!name) { 
-      showToast('Please enter your name'); 
-      btn.textContent = 'Continue'; btn.disabled = false; return; 
-    }
-    
-    // Create Document in Firestore
-    const user = await window.FirebaseStore.createUser(mobile, role, name);
-    if (user) finishLogin(user);
-    else {
-      showToast('Error registering user.');
-      btn.textContent = 'Continue'; btn.disabled = false;
-    }
+  const result = await window.FirebaseStore.loginUser(mobile, password, role);
+
+  _setAuthLoading('login-btn', 'login-spinner', 'login-btn-text', false, 'Log In');
+
+  if (!result.ok) {
+    _showAuthError('login-error', '❌ ' + result.error);
     return;
   }
 
-  // Phase 1: Check existing user
-  const user = await window.FirebaseStore.getUser(mobile);
-  
-  if (user) {
-    // User exists - check role
-    if (user.role !== role) {
-      showToast(`This number is already registered as an ${user.role}.`);
-      btn.textContent = 'Continue'; btn.disabled = false;
-    } else {
-      finishLogin(user);
-    }
-  } else {
-    // Not found - Slide down the name field
-    nameGrp.style.display = 'block';
-    btn.textContent = 'Complete Registration';
-    btn.disabled = false;
+  finishLogin(result.user);
+}
+
+// ── SIGNUP handler ────────────────────────────────────────────────────────────
+async function handleSignup(e) {
+  e.preventDefault();
+  console.log("[handleSignup] Form submitted");
+
+  // 1. Read form values
+  const name     = document.getElementById('s-name')?.value.trim()   || '';
+  const email    = document.getElementById('s-email')?.value.trim()  || '';
+  const mobile   = document.getElementById('s-mobile')?.value.trim() || '';
+  const password = document.getElementById('s-password')?.value       || '';
+  const role     = document.getElementById('s-role')?.value           || 'student';
+
+  console.log("[handleSignup] Read inputs:", { name, email, mobile, role, password: password ? "[provided]" : "[empty]" });
+
+  // 2. Clear previous errors
+  const errBanner = document.getElementById('signup-error');
+  if (errBanner) errBanner.style.display = 'none';
+
+  // 3. Validate each field
+  let ok = true;
+  const nameOk  = name.length > 1;
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const mobOk   = /^\d{10}$/.test(mobile);
+  const passOk  = password.length >= 6;
+
+  ok = _validateField('sf-name',     'serr-name',     nameOk)  && ok;
+  ok = _validateField('sf-email',    'serr-email',    emailOk) && ok;
+  ok = _validateField('sf-mobile',   'serr-mobile',   mobOk)   && ok;
+  ok = _validateField('sf-password', 'serr-password', passOk)  && ok;
+
+  console.log("[handleSignup] Validation:", { nameOk, emailOk, mobOk, passOk, overall: ok });
+
+  if (!ok) {
+    console.warn("[handleSignup] Validation failed — aborting.");
+    return;
   }
+
+  // 4. Guard: FirebaseStore must be ready
+  if (!window.FirebaseStore) {
+    console.error("[handleSignup] window.FirebaseStore is not defined — Firebase may not have loaded.");
+    _showAuthError('signup-error', '⚠️ Firebase is not ready yet. Please refresh and try again.');
+    return;
+  }
+
+  // 5. Show loading state
+  _setAuthLoading('signup-btn', 'signup-spinner', 'signup-btn-text', true, 'Create Account');
+  console.log("[handleSignup] Calling FirebaseStore.signupUser...");
+
+  // 6. Call Firestore
+  let result;
+  try {
+    result = await window.FirebaseStore.signupUser({ name, email, mobile, password, role });
+    console.log("[handleSignup] FirebaseStore.signupUser result:", result);
+  } catch (err) {
+    // Should not reach here (signupUser has internal try/catch), but safety net
+    console.error("[handleSignup] Unexpected error from signupUser:", err);
+    result = { ok: false, error: `Unexpected error: ${err.message}` };
+  }
+
+  // 7. Reset loading state
+  _setAuthLoading('signup-btn', 'signup-spinner', 'signup-btn-text', false, 'Create Account');
+
+  // 8. Handle result
+  if (!result.ok) {
+    console.warn("[handleSignup] Signup failed:", result.error);
+    _showAuthError('signup-error', '❌ ' + result.error);
+    return;
+  }
+
+  // 9. Success — switch to login tab with pre-filled mobile & success notice
+  console.log("[handleSignup] ✅ Signup successful! Redirecting to login...");
+  showToast('🎉 Account created! Please log in.');
+  _authMode = 'login';
+  navigate('login');
+
+  setTimeout(() => {
+    const mobileInput = document.getElementById('l-mobile');
+    if (mobileInput) mobileInput.value = mobile;
+
+    const banner = document.getElementById('login-error');
+    if (banner) {
+      banner.style.display    = 'flex';
+      banner.style.background = 'rgba(16,185,129,0.12)';
+      banner.style.borderColor = 'rgba(16,185,129,0.3)';
+      banner.style.color      = '#34d399';
+      banner.textContent      = '✅ Account created! Log in to continue.';
+    }
+  }, 100);
 }
 
 function finishLogin(user) {
-  currentUser = user;
-  localStorage.setItem('es_user', JSON.stringify(user));
+  currentUser = { mobile: user.mobile, role: user.role, name: user.name };
+  localStorage.setItem('nex_user', JSON.stringify(currentUser));
   updateAuthUI();
   navigate(user.role === 'organizer' ? 'dashboard' : 'home');
   showToast(`Welcome, ${user.name}! 🎉`);
@@ -1963,7 +2436,8 @@ function finishLogin(user) {
 
 function logoutUser() {
   currentUser = null;
-  localStorage.removeItem('es_user');
+  localStorage.removeItem('nex_user');
+  _authMode = 'login';
   updateAuthUI();
   navigate('login');
   showToast('Logged out successfully.');
@@ -1973,13 +2447,11 @@ async function editUserName() {
   if (!currentUser) return;
   const newName = prompt('Enter your new name:', currentUser.name);
   if (newName && newName.trim() !== currentUser.name) {
-    
-    // Optimistic UI Update might be nice, but we'll wait for DB
     const success = await window.FirebaseStore.updateName(currentUser.mobile, newName.trim());
     if (success) {
       currentUser.name = newName.trim();
-      localStorage.setItem('es_user', JSON.stringify(currentUser));
-      updateAuthUI(); // reflects new name instantly
+      localStorage.setItem('nex_user', JSON.stringify(currentUser));
+      updateAuthUI();
       showToast('Name updated successfully!');
     } else {
       showToast('Failed to connect to Firebase.');
@@ -2010,9 +2482,9 @@ requestBrowserNotifPermission(); // ask for browser notification permission
 
 // ── Restore State from URL or LocalStorage ──────────────────────────────────
 const params = new URLSearchParams(window.location.search);
-const initPage = params.get('page') || localStorage.getItem('es_currentPage') || 'home';
-const initPl = params.get('pl') || localStorage.getItem('es_currentPlatformId') || null;
-const initEv = params.get('ev') || localStorage.getItem('es_currentEventId') || null;
+const initPage = params.get('page') || localStorage.getItem('nex_currentPage') || 'home';
+const initPl = params.get('pl') || localStorage.getItem('nex_currentPlatformId') || null;
+const initEv = params.get('ev') || localStorage.getItem('nex_currentEventId') || null;
 
 // Replace the initial history state so the first back button logic works correctly
 let initUrl = "?page=" + initPage;

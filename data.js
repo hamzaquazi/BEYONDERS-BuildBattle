@@ -1,5 +1,5 @@
-// =============================================================================
-//  EventSphere — Data & Storage Layer  (data.js)
+﻿// =============================================================================
+//  NexEvent — Data & Storage Layer  (data.js)
 // =============================================================================
 //
 //  Data shapes
@@ -471,7 +471,7 @@ const Store = (() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(_platforms));
     } catch (err) {
-      console.warn("EventSphere: localStorage write failed →", err);
+      console.warn("NexEvent: localStorage write failed →", err);
     }
   }
 
@@ -490,7 +490,7 @@ const Store = (() => {
         }
       }
     } catch (err) {
-      console.warn("EventSphere: localStorage read failed, seeding →", err);
+      console.warn("NexEvent: localStorage read failed, seeding →", err);
     }
     // First visit / corrupted storage — write seed data
     _platforms = JSON.parse(JSON.stringify(SEED_PLATFORMS)); // deep clone
@@ -613,6 +613,7 @@ const Store = (() => {
         registrationStart: eventData.registrationStart,
         registrationEnd:   eventData.registrationEnd,
         visibility:        eventData.visibility === "private" ? "private" : "public",
+        qrImage:           eventData.qrImage || "",
         qr:                eventData.qr || "qr_sample.png",
         maxSpots:          Number(eventData.maxSpots) || 100,
         eventType:         eventData.eventType || 'solo',
@@ -641,8 +642,16 @@ const Store = (() => {
         return { ok: false, error: `Event "${eventId}" not found.` };
       }
 
+      // Determine email for duplicate/required checks (team uses leader email)
+      const checkEmail = userData.type === 'team'
+        ? userData.leader?.email
+        : userData.email;
+
       // Duplicate-email check
-      if (event.registrations.some(r => r.email === userData.email)) {
+      const existingEmails = event.registrations.map(r =>
+        r.type === 'team' ? r.leader?.email : r.email
+      );
+      if (checkEmail && existingEmails.includes(checkEmail)) {
         return { ok: false, error: "This email is already registered for the event." };
       }
 
@@ -651,20 +660,32 @@ const Store = (() => {
         return { ok: false, error: "This event is fully booked." };
       }
 
-      const required = ["name", "email", "phone"];
-      for (const field of required) {
-        if (!userData[field]) {
-          return { ok: false, error: `Missing required field: "${field}".` };
+      // Required field check (different for team vs solo)
+      if (userData.type === 'team') {
+        if (!userData.leader?.name || !userData.leader?.email) {
+          return { ok: false, error: "Team leader name and email are required." };
+        }
+      } else {
+        const required = ["name", "email", "phone"];
+        for (const field of required) {
+          if (!userData[field]) {
+            return { ok: false, error: `Missing required field: "${field}".` };
+          }
         }
       }
 
+      // Build registration — spread all userData fields to preserve paymentProof, etc.
       const newReg = {
-        id:     event.registrations.length + 1,
-        name:   userData.name.trim(),
-        email:  userData.email.trim().toLowerCase(),
-        phone:  userData.phone.trim(),
+        id:   event.registrations.length + 1,
+        date: new Date().toISOString().split("T")[0],
+        ...userData,
         status: userData.status === "Paid" ? "Paid" : "Pending",
-        date:   new Date().toISOString().split("T")[0],
+        // Normalise solo email/name
+        ...(userData.type !== 'team' && {
+          name:  userData.name?.trim(),
+          email: userData.email?.trim().toLowerCase(),
+          phone: userData.phone?.trim(),
+        }),
       };
 
       event.registrations.push(newReg);
