@@ -615,6 +615,8 @@ const Store = (() => {
         visibility:        eventData.visibility === "private" ? "private" : "public",
         qr:                eventData.qr || "qr_sample.png",
         maxSpots:          Number(eventData.maxSpots) || 100,
+        eventType:         eventData.eventType || 'solo',
+        teamSize:          Number(eventData.teamSize) || 1,
         filledSpots:       0,
         registrations:     [],
       };

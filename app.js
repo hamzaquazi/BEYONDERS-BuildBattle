@@ -4,6 +4,9 @@ let currentPlatformId = null;
 let currentEventId = null;
 let _countdownInterval = null; // cleared on every navigate()
 
+// ===== AUTH STATE =====
+let currentUser = JSON.parse(localStorage.getItem('es_user')) || null;
+
 // ===== NOTIFICATION STORE =====
 const NOTIF_KEY = 'es_notifications';
 
@@ -218,6 +221,21 @@ function navigate(page, opts = {}, skipHistory = false) {
   // Always kill any running countdown first
   if (_countdownInterval) { clearInterval(_countdownInterval); _countdownInterval = null; }
 
+  // Route protection
+  if (!currentUser && page !== 'login') {
+    return navigate('login', {}, skipHistory);
+  }
+  
+  if (currentUser && page === 'login') {
+    return navigate('home', {}, skipHistory);
+  }
+
+  // Role-based routing: students not allowed on dashboard
+  if (page === 'dashboard' && currentUser.role !== 'organizer') {
+    showToast('Access denied: Organizer only.');
+    return navigate('home', {}, skipHistory);
+  }
+
   currentPage = page;
   if (opts.platformId !== undefined) currentPlatformId = opts.platformId;
   if (opts.eventId !== undefined)   currentEventId   = opts.eventId;
@@ -263,6 +281,34 @@ function updateNavActive() {
     document.getElementById('nav-link-home')?.classList.add('active');
   } else if (currentPage === 'dashboard') {
     document.getElementById('nav-link-dashboard')?.classList.add('active');
+  } else if (currentPage === 'login') {
+    document.getElementById('nav-link-login')?.classList.add('active');
+  }
+  updateAuthUI();
+}
+
+function updateAuthUI() {
+  const profileDiv = document.getElementById('nav-profile');
+  const mobProfile = document.getElementById('mobile-profile');
+  const loginLinks  = [document.getElementById('nav-link-login'), document.getElementById('mobile-nav-login')];
+  const dashLinks   = [document.getElementById('nav-link-dashboard'), document.getElementById('mobile-nav-dashboard')];
+  
+  if (currentUser) {
+    loginLinks.forEach(el => el && (el.style.display = 'none'));
+    if (profileDiv) profileDiv.style.display = 'flex';
+    if (mobProfile) mobProfile.style.display = 'flex';
+    document.getElementById('nav-user-name').textContent = currentUser.name;
+    
+    if (currentUser.role === 'organizer') {
+      dashLinks.forEach(el => el && (el.style.display = 'block'));
+    } else {
+      dashLinks.forEach(el => el && (el.style.display = 'none'));
+    }
+  } else {
+    loginLinks.forEach(el => el && (el.style.display = 'block'));
+    if (profileDiv) profileDiv.style.display = 'none';
+    if (mobProfile) mobProfile.style.display = 'none';
+    dashLinks.forEach(el => el && (el.style.display = 'none'));
   }
 }
 
@@ -274,6 +320,7 @@ function renderPage() {
     case 'event':     app.innerHTML = renderEventDetail(); break;
     case 'register':  app.innerHTML = renderRegisterPage(); break;
     case 'dashboard': app.innerHTML = renderDashboard(); break;
+    case 'login':     app.innerHTML = renderLogin(); break;
     default:          app.innerHTML = renderHome();
   }
   attachPageEvents();
@@ -283,8 +330,10 @@ function renderPage() {
 document.getElementById('nav-home-link').addEventListener('click', e => { e.preventDefault(); navigate('home'); });
 document.getElementById('nav-link-home').addEventListener('click', e => { e.preventDefault(); navigate('home'); });
 document.getElementById('nav-link-dashboard').addEventListener('click', e => { e.preventDefault(); navigate('dashboard'); });
+document.getElementById('nav-link-login').addEventListener('click', e => { e.preventDefault(); navigate('login'); });
 document.getElementById('mobile-nav-home').addEventListener('click', e => { e.preventDefault(); closeMobileMenu(); navigate('home'); });
 document.getElementById('mobile-nav-dashboard').addEventListener('click', e => { e.preventDefault(); closeMobileMenu(); navigate('dashboard'); });
+document.getElementById('mobile-nav-login').addEventListener('click', e => { e.preventDefault(); closeMobileMenu(); navigate('login'); });
 
 // Hamburger
 document.getElementById('hamburger').addEventListener('click', () => {
@@ -858,6 +907,7 @@ function renderEventDetail() {
         <!-- Category + Status row -->
         <div class="edp-top-row">
           <span class="event-category-badge ${catBadgeClass(event.category)}">${catIcon(event.category)} ${event.category}</span>
+          <span class="event-category-badge tag-all" style="background:var(--bg-glass-hover)">${event.eventType === 'team' ? `👥 Team (${event.teamSize})` : '👤 Solo'}</span>
           <span class="edp-status-pill edp-status-${status.key}">
             <span class="edp-status-dot"></span>${status.label}
           </span>
@@ -903,8 +953,8 @@ function renderEventDetail() {
                 ? event.registrations.map((r, i) => `
                   <tr>
                     <td style="color:var(--text-faint)">${i + 1}</td>
-                    <td>${r.name}</td>
-                    <td>${r.email}</td>
+                    <td>${r.type === 'team' ? `${r.leader?.name} <span class="event-category-badge tag-all" style="font-size:0.65rem;padding:2px 6px">+${r.members?.length}👥</span>` : r.name}</td>
+                    <td>${r.type === 'team' ? r.leader?.email : r.email}</td>
                     <td>${formatDate(r.date)}</td>
                     <td><span class="status-badge status-${r.status}">${r.status}</span></td>
                   </tr>`).join('')
@@ -922,7 +972,7 @@ function renderEventDetail() {
           <button class="btn btn-primary btn-sm"
             ${open ? '' : 'disabled'}
             onclick="${open ? `navigate('register',{eventId:'${event.id}',platformId:'${platform.id}'})` : ''}">
-            ${open ? '📝 Register Now →' : '🔒 Registration Closed'}
+            ${open ? (event.eventType === 'team' ? '📝 Team Registration →' : '📝 Register Now →') : '🔒 Registration Closed'}
           </button>
         </div>
       </div>
@@ -1122,8 +1172,9 @@ function renderRegisterPage() {
 
         <form id="reg-form" novalidate>
 
+          ${event.eventType === 'team' ? `<h2 style="font-size:1.1rem;margin:16px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)">Team Leader</h2>` : ''}
           <!-- Name row -->
-          <div class="form-row">
+          <div class="form-row" id="leader-fields">
             <div class="form-group" id="grp-firstname">
               <label class="form-label" for="firstname">First Name *</label>
               <input class="form-control" id="firstname" type="text" placeholder="Arjun"
@@ -1156,6 +1207,28 @@ function renderRegisterPage() {
             </div>
             <div class="form-error" id="err-phone">Please enter a valid 10-digit phone number.</div>
           </div>
+
+          <!-- TEAM MEMBERS SECTION (ONLY IF TEAM) -->
+          ${event.eventType === 'team' ? `
+            <h2 style="font-size:1.1rem;margin:32px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)">Team Members</h2>
+            ${Array.from({ length: (event.teamSize || 2) - 1 }).map((_, i) => `
+              <div class="form-group" style="margin-bottom:16px;background:var(--bg-glass-hover);padding:16px;border-radius:var(--radius-sm)">
+                <h3 style="font-size:0.95rem;margin-bottom:12px;color:var(--text-muted)">Member ${i + 1}</h3>
+                <div class="form-row">
+                  <div class="form-group" style="width:100%" id="grp-member-${i}-name">
+                    <label class="form-label">Name *</label>
+                    <input class="form-control team-member-name" data-index="${i}" type="text" placeholder="Member Name" />
+                    <div class="form-error">Required.</div>
+                  </div>
+                  <div class="form-group" style="width:100%" id="grp-member-${i}-phone">
+                    <label class="form-label">Phone *</label>
+                    <input class="form-control team-member-phone" data-index="${i}" type="tel" placeholder="10-digit number" maxlength="10" />
+                    <div class="form-error">Invalid phone.</div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          ` : ''}
 
           <!-- Payment screenshot upload -->
           <div class="form-group" id="grp-payment">
@@ -1336,6 +1409,7 @@ function renderDashboard() {
                   <div class="dash-event-header">
                     <div class="dash-event-header-left">
                       <span class="event-category-badge ${catBadgeClass(ev.category)}">${catIcon(ev.category)} ${ev.category}</span>
+                      <span class="event-category-badge tag-all" style="background:var(--bg-glass-hover)">${ev.eventType === 'team' ? `👥 Team (${ev.teamSize})` : '👤 Solo'}</span>
                       <span class="edp-status-pill edp-status-${st.key}"><span class="edp-status-dot"></span>${st.label}</span>
                     </div>
                     <div class="dash-event-meta">
@@ -1364,9 +1438,9 @@ function renderDashboard() {
                           ${ev.registrations.map((r,i) => `
                             <tr>
                               <td style="color:var(--text-faint)">${i+1}</td>
-                              <td><strong>${r.name}</strong></td>
-                              <td style="color:var(--text-faint)">${r.email}</td>
-                              <td>${r.phone || '—'}</td>
+                              <td><strong>${r.type === 'team' ? `${r.leader?.name} <span class="event-category-badge tag-all" style="font-size:0.65rem;padding:2px 6px">+${r.members?.length}👥</span>` : r.name}</strong></td>
+                              <td style="color:var(--text-faint)">${r.type === 'team' ? r.leader?.email : r.email}</td>
+                              <td>${(r.type === 'team' ? r.leader?.phone : r.phone) || '—'}</td>
                               <td style="color:var(--text-faint);font-size:0.75rem">${r.paymentFile || '—'}</td>
                               <td>${formatDate(r.date)}</td>
                               <td><span class="status-badge status-${r.status}">${r.status}</span></td>
@@ -1419,6 +1493,20 @@ function renderDashboard() {
               <option value="Cultural">🎨 Cultural</option>
             </select>
             <div class="form-error" id="ce-err-category">Please select a category.</div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" id="ce-grp-type">
+              <label class="form-label" for="ce-type">Event Type *</label>
+              <select class="form-select" id="ce-type" onchange="document.getElementById('ce-grp-size').style.display = this.value === 'team' ? 'block' : 'none'">
+                <option value="solo" selected>Solo</option>
+                <option value="team">Team</option>
+              </select>
+            </div>
+            <div class="form-group" id="ce-grp-size" style="display:none">
+              <label class="form-label" for="ce-size">Team Size (Max)</label>
+              <input class="form-control" id="ce-size" type="number" min="2" max="5" value="4" />
+            </div>
           </div>
 
           <div class="form-group" id="ce-grp-desc">
@@ -1585,6 +1673,8 @@ function handleCreateEventSubmit(e) {
   }
 
   const platformId = document.getElementById('ce-platform').value;
+  const eventType = document.getElementById('ce-type').value;
+  const teamSize = eventType === 'team' ? (parseInt(document.getElementById('ce-size').value, 10) || 4) : 1;
 
   // Store.addEvent(platformId, eventData) — 2-arg API
   const result = Store.addEvent(platformId, {
@@ -1593,6 +1683,8 @@ function handleCreateEventSubmit(e) {
     description:       document.getElementById('ce-desc').value.trim(),
     registrationStart: startVal,
     registrationEnd:   endVal,
+    eventType:         eventType,
+    teamSize:          teamSize,
     whatsappLink:      document.getElementById('ce-wa').value.trim() || '',
     qr:                document.getElementById('ce-qr').value.trim() || 'qr_sample.png',
     maxSpots:          parseInt(document.getElementById('ce-max').value, 10) || 100,
@@ -1647,6 +1739,9 @@ function attachPageEvents() {
 function handleFormSubmit(e) {
   e.preventDefault();
   let valid = true;
+  
+  const event = getEventById(currentEventId);
+  if (!event) return;
 
   // Core field validation
   const fields = [
@@ -1664,6 +1759,32 @@ function handleFormSubmit(e) {
       else                        { grp.classList.remove('error'); }
     }
   });
+
+  // Team Member validation
+  const membersData = [];
+  if (event.eventType === 'team') {
+    const memCount = (event.teamSize || 2) - 1;
+    for (let i = 0; i < memCount; i++) {
+      const nameEl  = document.querySelector(`.team-member-name[data-index="${i}"]`);
+      const phoneEl = document.querySelector(`.team-member-phone[data-index="${i}"]`);
+      const grpName = document.getElementById(`grp-member-${i}-name`);
+      const grpPhone = document.getElementById(`grp-member-${i}-phone`);
+      
+      let memValid = true;
+      const memName = nameEl?.value.trim();
+      const memPhone = phoneEl?.value.trim();
+      
+      if (!memName)  { grpName?.classList.add('error'); valid = false; memValid = false; }
+      else           { grpName?.classList.remove('error'); }
+      
+      if (!/^\\d{10}$/.test(memPhone || '')) { grpPhone?.classList.add('error'); valid = false; memValid = false; }
+      else                                 { grpPhone?.classList.remove('error'); }
+
+      if (memValid) {
+        membersData.push({ name: memName, phone: memPhone });
+      }
+    }
+  }
 
   // Payment screenshot validation
   const paymentInput = document.getElementById('payment');
@@ -1693,13 +1814,30 @@ function handleFormSubmit(e) {
   _saveProfile({ firstName, lastName, email, phone });
 
   // ── Persist registration via Store ──────────────────────────────────────────
-  const result = Store.registerUser(currentEventId, {
-    name:            `${firstName} ${lastName}`,
-    email,
-    phone,
-    paymentFile:     fileName,
-    status:          'Pending',
-  });
+  
+  let payloadStr = {};
+  if (event.eventType === 'team') {
+    payloadStr = {
+      type: 'team',
+      leader: { name: `${firstName} ${lastName}`, email, phone },
+      members: membersData,
+      userMobile: currentUser?.mobile || phone,
+      paymentFile: fileName,
+      status: 'Pending',
+    };
+  } else {
+    payloadStr = {
+      type: 'solo',
+      name: `${firstName} ${lastName}`,
+      email,
+      phone,
+      userMobile: currentUser?.mobile || phone,
+      paymentFile: fileName,
+      status: 'Pending',
+    };
+  }
+
+  const result = Store.registerUser(currentEventId, payloadStr);
 
   if (!result.ok) {
     showToast(`⚠️ ${result.error}`);
@@ -1707,7 +1845,6 @@ function handleFormSubmit(e) {
   }
 
   // ── Notification: registration confirmed ────────────────────────────────────
-  const event    = getEventById(currentEventId);
   const platform = getPlatformById(event?.platformId || currentPlatformId);
 
   NotifStore.push({
@@ -1726,6 +1863,128 @@ function handleFormSubmit(e) {
 
   // ── Show success screen ──────────────────────────────────────────────────────
   showSuccessScreen(event?.whatsappLink, currentEventId, platform?.id || currentPlatformId);
+}
+
+// ===== FIREBASE AUTH & LOGIN FLOW =====
+
+function renderLogin() {
+  return `
+    <section class="page container" style="display:flex; justify-content:center; align-items:center; min-height:80vh">
+      <div class="card" style="width:100%; max-width:400px; padding:32px;">
+        <h2 style="margin-bottom:8px">Welcome to EventSphere</h2>
+        <p class="text-muted" style="margin-bottom:24px">Enter your mobile number to continue.</p>
+        
+        <form onsubmit="attemptLogin(event)">
+          <div class="form-group">
+            <label>Mobile Number</label>
+            <input type="tel" id="log-mobile" class="input" placeholder="e.g. 9876543210" required pattern="[0-9]{10}" />
+          </div>
+          
+          <div class="form-group">
+            <label>I am a...</label>
+            <select id="log-role" class="input">
+              <option value="student">Student / Participant</option>
+              <option value="organizer">Event Organizer</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="log-name-group" style="display:none; animation: pageFadeIn 0.3s ease;">
+            <label>We don't recognize this number. What's your name?</label>
+            <input type="text" id="log-name" class="input" placeholder="Your full name" />
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="log-btn" style="width:100%; margin-top:8px">Continue</button>
+        </form>
+      </div>
+    </section>
+  `;
+}
+
+async function attemptLogin(e) {
+  e.preventDefault();
+  const mobile = document.getElementById('log-mobile').value.trim();
+  const role   = document.getElementById('log-role').value;
+  const btn    = document.getElementById('log-btn');
+  const nameGrp = document.getElementById('log-name-group');
+  
+  // Wait for Firebase to be ready if it's lagging
+  if (!window.FirebaseStore) {
+    showToast('Firebase is initializing, please wait...');
+    return;
+  }
+
+  btn.textContent = 'Checking...';
+  btn.disabled = true;
+
+  if (nameGrp.style.display === 'block') {
+    // Phase 2: Create user
+    const name = document.getElementById('log-name').value.trim();
+    if (!name) { 
+      showToast('Please enter your name'); 
+      btn.textContent = 'Continue'; btn.disabled = false; return; 
+    }
+    
+    // Create Document in Firestore
+    const user = await window.FirebaseStore.createUser(mobile, role, name);
+    if (user) finishLogin(user);
+    else {
+      showToast('Error registering user.');
+      btn.textContent = 'Continue'; btn.disabled = false;
+    }
+    return;
+  }
+
+  // Phase 1: Check existing user
+  const user = await window.FirebaseStore.getUser(mobile);
+  
+  if (user) {
+    // User exists - check role
+    if (user.role !== role) {
+      showToast(`This number is already registered as an ${user.role}.`);
+      btn.textContent = 'Continue'; btn.disabled = false;
+    } else {
+      finishLogin(user);
+    }
+  } else {
+    // Not found - Slide down the name field
+    nameGrp.style.display = 'block';
+    btn.textContent = 'Complete Registration';
+    btn.disabled = false;
+  }
+}
+
+function finishLogin(user) {
+  currentUser = user;
+  localStorage.setItem('es_user', JSON.stringify(user));
+  updateAuthUI();
+  navigate(user.role === 'organizer' ? 'dashboard' : 'home');
+  showToast(`Welcome, ${user.name}! 🎉`);
+}
+
+function logoutUser() {
+  currentUser = null;
+  localStorage.removeItem('es_user');
+  updateAuthUI();
+  navigate('login');
+  showToast('Logged out successfully.');
+}
+
+async function editUserName() {
+  if (!currentUser) return;
+  const newName = prompt('Enter your new name:', currentUser.name);
+  if (newName && newName.trim() !== currentUser.name) {
+    
+    // Optimistic UI Update might be nice, but we'll wait for DB
+    const success = await window.FirebaseStore.updateName(currentUser.mobile, newName.trim());
+    if (success) {
+      currentUser.name = newName.trim();
+      localStorage.setItem('es_user', JSON.stringify(currentUser));
+      updateAuthUI(); // reflects new name instantly
+      showToast('Name updated successfully!');
+    } else {
+      showToast('Failed to connect to Firebase.');
+    }
+  }
 }
 
 // ===== TOAST =====

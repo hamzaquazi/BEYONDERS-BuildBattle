@@ -120,6 +120,20 @@ h1,h2,h3,h4,h5 { font-family: 'Outfit', sans-serif; font-weight: 700; line-heigh
 }
 .mobile-link:hover { color: var(--text); background: var(--bg-glass-hover); }
 
+/* ── Navbar Profile (Logged in state) ── */
+.nav-profile {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-glass); border: 1px solid var(--border);
+  padding: 4px 12px; border-radius: 99px;
+}
+.nav-welcome { font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 0.85rem; color: var(--text-muted); }
+.nav-welcome span { font-weight: 700; color: var(--text); }
+.nav-edit-btn { background: none; border: none; color: var(--primary-light); font-size: 0.75rem; cursor: pointer; transition: color var(--transition); }
+.nav-edit-btn:hover { color: #fff; }
+.nav-logout-btn { background: var(--bg-card-hover); border: 1px solid var(--danger); color: var(--danger); padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; cursor: pointer; transition: all var(--transition); }
+.nav-logout-btn:hover { background: var(--danger); color: #fff; }
+.text-danger { color: var(--danger) !important; }
+
 /* ── Nav actions wrapper (links + bell) ── */
 .nav-actions {
   display: flex; align-items: center; gap: 4px;
